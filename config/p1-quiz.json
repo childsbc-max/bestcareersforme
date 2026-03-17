@@ -1,0 +1,671 @@
+{
+  "hollandQuestions": [
+    {
+      "id": "H1",
+      "questionNumber": 1,
+      "text": "What kind of problems do you most enjoy solving?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "Mechanical or physical problems \u2014 how things work  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "Intellectual puzzles \u2014 why things happen  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "Creative challenges \u2014 how to express an idea  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "Human problems \u2014 how to help or support people  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "Strategic problems \u2014 how to win or persuade  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "Process problems \u2014 how to organize or improve efficiency  [C]",
+          "hollandType": "C"
+        }
+      ]
+    },
+    {
+      "id": "H2",
+      "questionNumber": 2,
+      "text": "In a group project, which role do you naturally take on?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "The one who builds or makes things work  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "The one who researches and analyzes  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "The one who designs or presents creatively  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "The one who keeps the team together emotionally  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "The leader who drives the project forward  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "The one who organizes tasks and deadlines  [C]",
+          "hollandType": "C"
+        }
+      ]
+    },
+    {
+      "id": "H3",
+      "questionNumber": 3,
+      "text": "What kind of work environment appeals to you most?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "A workshop, job site, or hands-on technical setting  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "A lab, library, or quiet research space  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "A studio, stage, or open creative space  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "A school, clinic, or community setting  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "An office, boardroom, or anywhere I can lead  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "A structured office with clear systems  [C]",
+          "hollandType": "C"
+        }
+      ]
+    },
+    {
+      "id": "H4",
+      "questionNumber": 4,
+      "text": "Which of these careers sounds most interesting to you?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "Electrician, engineer, or pilot  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "Scientist, doctor, or data analyst  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "Graphic designer, filmmaker, or musician  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "Teacher, counselor, or social worker  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "Entrepreneur, lawyer, or sales director  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "Accountant, HR manager, or office administrator  [C]",
+          "hollandType": "C"
+        }
+      ]
+    },
+    {
+      "id": "H5",
+      "questionNumber": 5,
+      "text": "Which statement sounds most like you?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "I like working with tools, machines, or physical objects  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "I like understanding how and why things work  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "I need creative expression in my work or I feel stuck  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "I feel most fulfilled when I am helping someone  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "I am naturally competitive and like to lead  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "I like when things are organized, accurate, and clear  [C]",
+          "hollandType": "C"
+        }
+      ]
+    },
+    {
+      "id": "H6",
+      "questionNumber": 6,
+      "text": "When you imagine a satisfying career, what matters most?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "Using physical skill and technical expertise  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "Intellectual challenge and continuous learning  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "Creative freedom and self-expression  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "Making a real difference in people's lives  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "Influence, leadership, and financial reward  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "Stability, accuracy, and clear expectations  [C]",
+          "hollandType": "C"
+        }
+      ]
+    },
+    {
+      "id": "H7",
+      "questionNumber": 7,
+      "text": "What best describes how you make decisions?",
+      "type": "holland",
+      "answers": [
+        {
+          "text": "Practically \u2014 based on what works in the real world  [R]",
+          "hollandType": "R"
+        },
+        {
+          "text": "Analytically \u2014 based on evidence and logic  [I]",
+          "hollandType": "I"
+        },
+        {
+          "text": "Intuitively \u2014 based on feel and creative instinct  [A]",
+          "hollandType": "A"
+        },
+        {
+          "text": "Empathetically \u2014 based on how it affects people  [S]",
+          "hollandType": "S"
+        },
+        {
+          "text": "Strategically \u2014 based on goals and outcomes  [E]",
+          "hollandType": "E"
+        },
+        {
+          "text": "Systematically \u2014 based on rules, processes, and data  [C]",
+          "hollandType": "C"
+        }
+      ]
+    }
+  ],
+  "p1Questions": [
+    {
+      "id": "Q2",
+      "label": "Work Setting",
+      "text": "Where would you prefer to work?",
+      "filterType": "SOFT FILTER",
+      "answers": [
+        {
+          "text": "Indoors",
+          "mapping": {
+            "workSetting": "indoors"
+          }
+        },
+        {
+          "text": "Outdoors",
+          "mapping": {
+            "workSetting": "outdoors"
+          }
+        },
+        {
+          "text": "A mix of indoor and outdoor",
+          "mapping": {
+            "workSetting": "mix"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "label": "People Interaction",
+      "text": "How much do you want working with people to be part of your day-to-day job? Pick the one that fits best.",
+      "filterType": "SOFT FILTER",
+      "answers": [
+        {
+          "text": "I want people to be the center of my work \u2014 I'm energized by constant interaction",
+          "mapping": {
+            "peopleContactMin": 4.5,
+            "peopleContactMax": 5.0
+          }
+        },
+        {
+          "text": "I like regular contact with people but also need time to focus independently",
+          "mapping": {
+            "peopleContactMin": 3.5,
+            "peopleContactMax": 4.9
+          }
+        },
+        {
+          "text": "I prefer mostly independent work with occasional collaboration",
+          "mapping": {
+            "peopleContactMin": 2.5,
+            "peopleContactMax": 3.9
+          }
+        },
+        {
+          "text": "I want to work mostly alone \u2014 minimal meetings or client interaction",
+          "mapping": {
+            "peopleContactMin": 0,
+            "peopleContactMax": 3.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "label": "Physical Activity Level",
+      "text": "How physically active do you want your work to be?",
+      "filterType": "SOFT FILTER",
+      "answers": [
+        {
+          "text": "Very active \u2014 I want to be on my feet, moving, or doing physical work most of the day",
+          "mapping": {
+            "physicalDemandLevel": "Highly Active"
+          }
+        },
+        {
+          "text": "Moderately active \u2014 a mix of physical activity and seated or desk work",
+          "mapping": {
+            "physicalDemandLevel": "Moderately Active"
+          }
+        },
+        {
+          "text": "Mostly stationary \u2014 I prefer to work primarily at a desk or workstation",
+          "mapping": {
+            "physicalDemandLevel": "Primarily Sedentary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "label": "Income Goal",
+      "text": "Which of these best describes what you need from your income someday?",
+      "filterType": "HARD FILTER",
+      "answers": [
+        {
+          "text": "Just enough to cover my basics",
+          "mapping": {
+            "salaryFloor": 24480
+          }
+        },
+        {
+          "text": "Enough to cover my basics and have some freedom",
+          "mapping": {
+            "salaryFloor": 40000
+          }
+        },
+        {
+          "text": "A comfortable life without financial stress",
+          "mapping": {
+            "salaryFloor": 60000
+          }
+        },
+        {
+          "text": "Enough to support a family without worry",
+          "mapping": {
+            "salaryFloor": 80000
+          }
+        },
+        {
+          "text": "I want to be able to build wealth over time",
+          "mapping": {
+            "salaryFloor": 100000
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "label": "Location",
+      "text": "What state do you currently live in?",
+      "filterType": "LOOKUP",
+      "answers": [],
+      "inputType": "state",
+      "states": [
+        {
+          "abbr": "AL",
+          "name": "Alabama"
+        },
+        {
+          "abbr": "AK",
+          "name": "Alaska"
+        },
+        {
+          "abbr": "AZ",
+          "name": "Arizona"
+        },
+        {
+          "abbr": "AR",
+          "name": "Arkansas"
+        },
+        {
+          "abbr": "CA",
+          "name": "California"
+        },
+        {
+          "abbr": "CO",
+          "name": "Colorado"
+        },
+        {
+          "abbr": "CT",
+          "name": "Connecticut"
+        },
+        {
+          "abbr": "DE",
+          "name": "Delaware"
+        },
+        {
+          "abbr": "DC",
+          "name": "District of Columbia"
+        },
+        {
+          "abbr": "FL",
+          "name": "Florida"
+        },
+        {
+          "abbr": "GA",
+          "name": "Georgia"
+        },
+        {
+          "abbr": "HI",
+          "name": "Hawaii"
+        },
+        {
+          "abbr": "ID",
+          "name": "Idaho"
+        },
+        {
+          "abbr": "IL",
+          "name": "Illinois"
+        },
+        {
+          "abbr": "IN",
+          "name": "Indiana"
+        },
+        {
+          "abbr": "IA",
+          "name": "Iowa"
+        },
+        {
+          "abbr": "KS",
+          "name": "Kansas"
+        },
+        {
+          "abbr": "KY",
+          "name": "Kentucky"
+        },
+        {
+          "abbr": "LA",
+          "name": "Louisiana"
+        },
+        {
+          "abbr": "ME",
+          "name": "Maine"
+        },
+        {
+          "abbr": "MD",
+          "name": "Maryland"
+        },
+        {
+          "abbr": "MA",
+          "name": "Massachusetts"
+        },
+        {
+          "abbr": "MI",
+          "name": "Michigan"
+        },
+        {
+          "abbr": "MN",
+          "name": "Minnesota"
+        },
+        {
+          "abbr": "MS",
+          "name": "Mississippi"
+        },
+        {
+          "abbr": "MO",
+          "name": "Missouri"
+        },
+        {
+          "abbr": "MT",
+          "name": "Montana"
+        },
+        {
+          "abbr": "NE",
+          "name": "Nebraska"
+        },
+        {
+          "abbr": "NV",
+          "name": "Nevada"
+        },
+        {
+          "abbr": "NH",
+          "name": "New Hampshire"
+        },
+        {
+          "abbr": "NJ",
+          "name": "New Jersey"
+        },
+        {
+          "abbr": "NM",
+          "name": "New Mexico"
+        },
+        {
+          "abbr": "NY",
+          "name": "New York"
+        },
+        {
+          "abbr": "NC",
+          "name": "North Carolina"
+        },
+        {
+          "abbr": "ND",
+          "name": "North Dakota"
+        },
+        {
+          "abbr": "OH",
+          "name": "Ohio"
+        },
+        {
+          "abbr": "OK",
+          "name": "Oklahoma"
+        },
+        {
+          "abbr": "OR",
+          "name": "Oregon"
+        },
+        {
+          "abbr": "PA",
+          "name": "Pennsylvania"
+        },
+        {
+          "abbr": "RI",
+          "name": "Rhode Island"
+        },
+        {
+          "abbr": "SC",
+          "name": "South Carolina"
+        },
+        {
+          "abbr": "SD",
+          "name": "South Dakota"
+        },
+        {
+          "abbr": "TN",
+          "name": "Tennessee"
+        },
+        {
+          "abbr": "TX",
+          "name": "Texas"
+        },
+        {
+          "abbr": "UT",
+          "name": "Utah"
+        },
+        {
+          "abbr": "VT",
+          "name": "Vermont"
+        },
+        {
+          "abbr": "VA",
+          "name": "Virginia"
+        },
+        {
+          "abbr": "WA",
+          "name": "Washington"
+        },
+        {
+          "abbr": "WV",
+          "name": "West Virginia"
+        },
+        {
+          "abbr": "WI",
+          "name": "Wisconsin"
+        },
+        {
+          "abbr": "WY",
+          "name": "Wyoming"
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "label": "Willingness to Relocate",
+      "text": "Are you willing to move to a different state for work after school?",
+      "filterType": "CONDITIONAL FILTER",
+      "answers": [
+        {
+          "text": "Yes \u2014 I am open to moving",
+          "mapping": {
+            "willingToRelocate": true
+          }
+        },
+        {
+          "text": "No \u2014 I want to stay where I am",
+          "mapping": {
+            "willingToRelocate": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "label": "Job Market Stability",
+      "text": "How important is it that you work in a field where hiring is flat or growing in your area?",
+      "filterType": "WEIGHT",
+      "answers": [
+        {
+          "text": "Very important \u2014 I want strong local job availability",
+          "mapping": {
+            "jobMarketWeight": "high"
+          }
+        },
+        {
+          "text": "Somewhat important \u2014 I would like reasonable options nearby",
+          "mapping": {
+            "jobMarketWeight": "medium"
+          }
+        },
+        {
+          "text": "Not important \u2014 I am willing to follow the opportunity",
+          "mapping": {
+            "jobMarketWeight": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q9",
+      "label": "AI Disruption Tolerance",
+      "text": "How do you feel about working in a field where your tools and methods may change significantly due to AI and automation?",
+      "filterType": "SCORED FILTER",
+      "answers": [
+        {
+          "text": "1 \u2014 I am confident I can navigate AI-related job changes (high AI risk tolerance)",
+          "mapping": {
+            "aiToleranceScale": 1
+          }
+        },
+        {
+          "text": "2 \u2014 I am somewhat comfortable adapting to change",
+          "mapping": {
+            "aiToleranceScale": 2
+          }
+        },
+        {
+          "text": "3 \u2014 I am neutral \u2014 it depends on the career",
+          "mapping": {
+            "aiToleranceScale": 3
+          }
+        },
+        {
+          "text": "4 \u2014 I prefer fields where AI impact is limited",
+          "mapping": {
+            "aiToleranceScale": 4
+          }
+        },
+        {
+          "text": "5 \u2014 I do not want to work in a field being impacted by AI (low AI risk tolerance)",
+          "mapping": {
+            "aiToleranceScale": 5
+          }
+        }
+      ]
+    }
+  ],
+  "questionOrder": [
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "H7",
+    "Q2",
+    "Q3",
+    "Q4",
+    "Q5",
+    "Q6",
+    "Q7",
+    "Q8",
+    "Q9"
+  ]
+}
