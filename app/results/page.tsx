@@ -163,7 +163,7 @@ export default function ResultsPage() {
             <article key={c.soc} className="rounded border border-zinc-300 bg-white p-4">
               <h3 className="text-lg font-semibold text-zinc-950">{c.name}</h3>
               <div className="mt-1 text-sm text-zinc-600">
-                Median salary: ${Math.round(c.medianSalary || 0).toLocaleString()} · Match: {c.hollandScore || 0}
+                Mean salary: ${Math.round(c.medianSalary || 0).toLocaleString()} · Match: {c.hollandScore || 0}
               </div>
 
               <div className="mt-3 grid gap-1 text-sm text-zinc-800">

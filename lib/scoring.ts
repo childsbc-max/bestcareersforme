@@ -50,21 +50,29 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
 
   const salaryFloor = (answers.Q5 as any)?.mapping?.salaryFloor as number | undefined;
   if (salaryFloor != null) {
-    result = result.filter((c) => (c.salaryLow || 0) >= salaryFloor);
+    result = result.filter((c) => {
+      const meanSalary = c.medianSalary ?? 0;
+      return meanSalary >= salaryFloor;
+    });
   }
 
-  // Education ceiling (P1/P2): if user is NOT open to more education, ceiling = completed (assume high school).
-  if (personaId === "P1" || personaId === "P2") {
-    const completed = "highschool";
+  // Education ceiling (P1/P2/P3): if user is NOT open to more education, ceiling = completed.
+  // P3 (college/recent grad) assumes bachelor's; P1/P2 assume high school.
+  if (personaId === "P1" || personaId === "P2" || personaId === "P3") {
+    const completed = personaId === "P3" ? "bachelor" : "highschool";
     const open =
       personaId === "P2"
         ? ((answers.P2_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined)
-        : ((answers.P1_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined);
+        : personaId === "P1"
+        ? ((answers.P1_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined)
+        : ((answers.P3_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined);
     const ceiling =
       open === true
         ? (personaId === "P2"
             ? ((answers.P2_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
-            : ((answers.P1_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined))
+            : personaId === "P1"
+            ? ((answers.P1_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
+            : ((answers.P3_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined))
         : completed;
 
     const ceilingRank = educationRankFromKey(ceiling);
@@ -72,6 +80,25 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
       result = result.filter((c) => {
         const reqRank = educationRankFromRequirement(c.educationRequirements || "");
         return reqRank == null ? true : reqRank <= ceilingRank;
+      });
+    }
+  }
+
+  // P3: when "qualified now", exclude careers requiring more experience than user has
+  if (personaId === "P3") {
+    const qualifiedNow = (answers.P3_QUALIFIED_NOW as any)?.mapping?.p3QualifiedNow as boolean | undefined;
+    const expLevel = (answers.P3_EXPERIENCE as any)?.mapping?.p3ExperienceLevel as string | undefined;
+    if (qualifiedNow === true) {
+      const userLevel =
+        expLevel === "none" ? 0 :
+        expLevel === "little" ? 1 :
+        expLevel === "some" ? 2 :
+        expLevel === "significant" ? 3 :
+        0; // default to none when qualified-now but experience unknown
+      const maxReqLevel = Math.min(userLevel + 1, 4);
+      result = result.filter((c) => {
+        const reqLevel = experienceRankFromRequirement((c as any).experienceRequirements || "");
+        return reqLevel == null || reqLevel <= maxReqLevel;
       });
     }
   }
@@ -115,7 +142,31 @@ function educationRankFromRequirement(req: string): number | null {
   if (r.includes("associate")) return 2;
   if (r.includes("bachelor")) return 3;
   if (r.includes("master")) return 4;
-  if (r.includes("doctoral") || r.includes("phd") || r.includes("jd") || r.includes("md")) return 5;
+  // Doctoral, JD, MD, First Professional Degree (law, medicine, etc.)
+  if (
+    r.includes("doctoral") ||
+    r.includes("phd") ||
+    r.includes("jd") ||
+    r.includes("md") ||
+    r.includes("first professional") ||
+    r.includes("professional degree")
+  )
+    return 5;
+  return null;
+}
+
+function experienceRankFromRequirement(req: string): number | null {
+  const r = String(req || "").toLowerCase();
+  if (!r) return 0;
+  if (r.includes("none") || r.includes("no experience")) return 0;
+  if (r.includes("0-1") || r.includes("0-2") || r.includes("1-2") || r.includes("3-6 months") || r.includes("6 months")) return 1;
+  if (r.includes("2-4")) return 2;
+  if (r.includes("4-6")) return 3;
+  // 6+ years: explicit + or "over X" or "X or more" or "more than X"
+  if (r.includes("6+") || r.includes("7+") || r.includes("8+") || r.includes("9+") || r.includes("10+")) return 4;
+  if (/over\s*(6|7|8|9|\d{2,})/.test(r)) return 4;
+  if (r.includes("6 or more") || r.includes("7 or more") || r.includes("8 or more") || r.includes("10 or more")) return 4;
+  if (/more\s+than\s+(5|6|7|8|9|\d{2,})\s*years?/.test(r)) return 4;
   return null;
 }
 
@@ -129,12 +180,18 @@ function applyAiExclusions(careers: Career[], answers: Answers): Career[] {
 }
 
 function applySoftPenalties(careers: Career[], answers: Answers): Array<Career & { _softPenalty: number }> {
+  const personaId = (answers.personaId as any)?.value as string | undefined;
   const workSetting = (answers.Q2 as any)?.mapping?.workSetting as string | undefined;
   const peopleMin = (answers.Q3 as any)?.mapping?.peopleContactMin as number | undefined;
   const peopleMax = (answers.Q3 as any)?.mapping?.peopleContactMax as number | undefined;
   const peopleRanges = (answers.Q3 as any)?.mapping?.peopleContactRanges as Array<{ min: number; max: number }> | undefined;
   const physicalLevel = (answers.Q4 as any)?.mapping?.physicalDemandLevel as string | undefined;
   const physicalLevels = (answers.Q4 as any)?.mapping?.physicalDemandLevels as string[] | undefined;
+
+  const p3Major = (answers.P3_MAJOR as any)?.mapping?.primaryMajor as string | undefined;
+  const p3MajorScope = (answers.P3_MAJOR_SCOPE as any)?.mapping?.p3MajorScope as string | undefined;
+  const p3QualifiedNow = (answers.P3_QUALIFIED_NOW as any)?.mapping?.p3QualifiedNow as boolean | undefined;
+  const p3ExperienceLevel = (answers.P3_EXPERIENCE as any)?.mapping?.p3ExperienceLevel as string | undefined;
 
   return careers.map((c) => {
     let penalty = 0;
@@ -175,6 +232,53 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
         const preferred = String(physicalLevel).toLowerCase();
         if (!matchesPreferred(preferred)) penalty += 20;
       }
+    }
+
+    // Persona 3: major alignment soft penalties
+    if (personaId === "P3" && p3Major && c.suggestedMajors) {
+      const major = String(p3Major || "").toLowerCase();
+      const suggested = String(c.suggestedMajors || "").toLowerCase();
+      let matchesMajor = suggested.includes(major);
+      // Accounting is related to Finance, Economics, Business Analytics (e.g. Actuaries, financial roles)
+      if (!matchesMajor && major === "accounting") {
+        matchesMajor = /finance|economics|business analytics/.test(suggested);
+      }
+      if (p3MajorScope === "direct") {
+        if (!matchesMajor) penalty += 40;
+      } else if (p3MajorScope === "adjacent") {
+        if (!matchesMajor) penalty += 15;
+      }
+      // "any" -> no penalty
+    }
+
+    // Persona 3: experience vs. experience requirements — only when user wants "qualified now"
+    if (personaId === "P3" && p3QualifiedNow === true && p3ExperienceLevel != null && (c as any).experienceRequirements) {
+      const userLevel =
+        p3ExperienceLevel === "none" ? 0 :
+        p3ExperienceLevel === "little" ? 1 :
+        p3ExperienceLevel === "some" ? 2 :
+        p3ExperienceLevel === "significant" ? 3 :
+        null;
+      const reqLevel = experienceRankFromRequirement((c as any).experienceRequirements || "");
+      if (userLevel != null && reqLevel != null) {
+        if (userLevel === 0 && reqLevel >= 2) {
+          penalty += 30;
+        } else if (userLevel === 1 && reqLevel >= 3) {
+          penalty += 20;
+        } else if (userLevel === 2 && reqLevel >= 4) {
+          penalty += 20;
+        }
+      }
+    }
+
+    // Persona 3: education alignment — user has bachelor's, so bachelor's-required careers rank higher than high-school-only
+    if (personaId === "P3") {
+      const reqRank = educationRankFromRequirement(c.educationRequirements || "");
+      if (reqRank === 0) {
+        // Career requires only high school; user has bachelor's — add soft penalty so bachelor's careers rank higher
+        penalty += 10;
+      }
+      // Bachelor's (3) and above: no penalty
     }
 
     return { ...c, _softPenalty: penalty };
