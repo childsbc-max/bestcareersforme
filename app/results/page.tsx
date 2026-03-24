@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import careers from "@/data/careers.json";
 import stateDemand from "@/data/stateDemand.json";
 import quizData from "@/data/quiz-data.json";
-import { scoreAndRankCareersWithDebug } from "@/lib/scoring";
+import { scoreAndRankCareersWithDebug, educationRankFromRequirement, experienceRankFromRequirement } from "@/lib/scoring";
 import type { Answers, CareerData, QuizData } from "@/lib/types";
 
 const QUIZ_STORAGE_KEY = "bestcareerfor.me:quiz_answers:v1";
@@ -16,6 +16,7 @@ export default function ResultsPage() {
   const [answers, setAnswers] = useState<Answers | null>(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [sortBy, setSortBy] = useState<string>("default");
 
   useEffect(() => {
     try {
@@ -26,25 +27,14 @@ export default function ResultsPage() {
     }
   }, []);
 
-  const results = useMemo(() => {
+  const allResults = useMemo(() => {
     if (!answers) return [];
     const qd = quizData as QuizData;
     const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
-    return scoreAndRankCareersWithDebug(answers, qd, cd).results.slice(0, 8);
-  }, [answers]);
-
-  const debugInfo = useMemo(() => {
-    if (!answers) return null;
-    const qd = quizData as QuizData;
-    const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
-    const isDebug = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1";
-    if (!isDebug) return null;
-    return scoreAndRankCareersWithDebug(answers, qd, cd).debug;
+    return scoreAndRankCareersWithDebug(answers, qd, cd).results;
   }, [answers]);
 
   const selectedState = ((answers as any)?.Q6 as any)?.value as string | undefined;
-  const willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
-  const personaId = ((answers as any)?.personaId as any)?.value as string | undefined;
 
   function getDemandForCareerInState(soc: string): string | null {
     if (!selectedState) return null;
@@ -55,14 +45,79 @@ export default function ResultsPage() {
     return row?.demandLevel ? String(row.demandLevel) : null;
   }
 
+  const demandRank = (level: string | null): number => {
+    if (!level) return 0;
+    const l = level.toLowerCase();
+    if (l.includes("high")) return 4;
+    if (l.includes("average") && !l.includes("below")) return 3;
+    if (l.includes("below")) return 2;
+    if (l.includes("low")) return 1;
+    return 0;
+  };
+
+  const results = useMemo(() => {
+    let sorted = [...allResults];
+    if (sortBy === "salary-desc") {
+      sorted.sort((a, b) => (b.medianSalary ?? 0) - (a.medianSalary ?? 0));
+    } else if (sortBy === "demand") {
+      sorted.sort((a, b) => {
+        const da = demandRank(getDemandForCareerInState(a.soc));
+        const db = demandRank(getDemandForCareerInState(b.soc));
+        return db - da;
+      });
+    } else if (sortBy === "edu-most") {
+      sorted.sort((a, b) => {
+        const ra = educationRankFromRequirement(a.educationRequirements || "") ?? -1;
+        const rb = educationRankFromRequirement(b.educationRequirements || "") ?? -1;
+        return rb - ra;
+      });
+    } else if (sortBy === "edu-least") {
+      sorted.sort((a, b) => {
+        const ra = educationRankFromRequirement(a.educationRequirements || "") ?? 999;
+        const rb = educationRankFromRequirement(b.educationRequirements || "") ?? 999;
+        return ra - rb;
+      });
+    } else if (sortBy === "exp-most") {
+      sorted.sort((a, b) => {
+        const ra = experienceRankFromRequirement((a as any).experienceRequirements || "") ?? -1;
+        const rb = experienceRankFromRequirement((b as any).experienceRequirements || "") ?? -1;
+        return rb - ra;
+      });
+    } else if (sortBy === "exp-least") {
+      sorted.sort((a, b) => {
+        const ra = experienceRankFromRequirement((a as any).experienceRequirements || "") ?? 999;
+        const rb = experienceRankFromRequirement((b as any).experienceRequirements || "") ?? 999;
+        return ra - rb;
+      });
+    } else if (sortBy === "ai-risk") {
+      sorted.sort((a, b) => (b.aiReplacementRisk ?? 0) - (a.aiReplacementRisk ?? 0));
+    }
+    return sorted.slice(0, 8);
+  }, [allResults, sortBy, selectedState]);
+
+  const debugInfo = useMemo(() => {
+    if (!answers) return null;
+    const qd = quizData as QuizData;
+    const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
+    const isDebug = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1";
+    if (!isDebug) return null;
+    return scoreAndRankCareersWithDebug(answers, qd, cd).debug;
+  }, [answers]);
+
+  const willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
+  const personaId = ((answers as any)?.personaId as any)?.value as string | undefined;
+
   async function submitFeedback() {
     if (!feedback.trim()) return;
     setFeedbackStatus("sending");
     try {
+      const qd = quizData as QuizData;
+      const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
+      const { debug } = scoreAndRankCareersWithDebug(answers as Answers, qd, cd);
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback, answers }),
+        body: JSON.stringify({ feedback, answers, debug }),
       });
       if (!res.ok) throw new Error("bad status");
       setFeedbackStatus("sent");
@@ -118,12 +173,12 @@ export default function ResultsPage() {
 
       {/* Feedback near the top */}
       <section className="mt-6 rounded border border-zinc-300 bg-white p-4">
-        <h2 className="text-base font-semibold">Help us improve</h2>
+        <h2 className="text-base font-semibold text-black">Help us improve</h2>
         <p className="mt-1 text-sm text-zinc-600">
           This quiz is in beta. What worked, what didn’t, and what careers were you hoping to see?
         </p>
         <textarea
-          className="mt-3 w-full rounded border border-zinc-300 p-3 text-sm"
+          className="mt-3 w-full rounded border border-zinc-300 p-3 text-sm text-black"
           rows={4}
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
@@ -144,6 +199,29 @@ export default function ResultsPage() {
           )}
         </div>
       </section>
+
+      {allResults.length > 0 ? (
+        <div className="mt-6 flex items-center gap-3">
+          <label htmlFor="sort-by" className="text-sm font-medium text-zinc-700">
+            Sort by:
+          </label>
+          <select
+            id="sort-by"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900"
+          >
+            <option value="default">Best match (default)</option>
+            <option value="salary-desc">Salary (high to low)</option>
+            <option value="demand">Demand level</option>
+            <option value="edu-most">Education (most to least)</option>
+            <option value="edu-least">Education (least to most)</option>
+            <option value="exp-most">Experience (most to least)</option>
+            <option value="exp-least">Experience (least to most)</option>
+            <option value="ai-risk">Risk of AI disruption</option>
+          </select>
+        </div>
+      ) : null}
 
       {debugInfo ? (
         <section className="mt-6 rounded border border-amber-300 bg-amber-50 p-4">
@@ -223,24 +301,6 @@ export default function ResultsPage() {
           Try any one of these and you should get more results back:
         </p>
         <div className="mt-4 grid gap-3">
-          {personaId === "P2" ? (
-            <button
-              type="button"
-              onClick={() =>
-                applyAnswerPatch({
-                  P2_DIRECTION: {
-                    text: "I want to move into something completely different",
-                    mapping: { p2Direction: "different" },
-                  } as any,
-                })
-              }
-              className="rounded border border-zinc-300 bg-white px-4 py-3 text-left text-sm text-zinc-900 hover:bg-zinc-50"
-            >
-              <div className="font-medium">Set career direction to “different”</div>
-              <div className="mt-0.5 text-xs text-zinc-600">Shows jobs unrelated to your current job.</div>
-            </button>
-          ) : null}
-
           <button
             type="button"
             onClick={() =>
@@ -254,19 +314,32 @@ export default function ResultsPage() {
             <div className="mt-0.5 text-xs text-zinc-600">Example: $40k–$60k.</div>
           </button>
 
-          {personaId === "P2" ? (
+          {personaId === "P4" || personaId === "P5" ? (
             <button
               type="button"
               onClick={() =>
-                applyAnswerPatch({
-                  P2_EDU_OPEN: { text: "Yes", mapping: { openToMoreEducation: true } } as any,
-                  P2_EDU_CEIL: { text: "Bachelor's degree", mapping: { educationCeiling: "bachelor" } } as any,
-                })
+                applyAnswerPatch(
+                  personaId === "P4"
+                    ? ({
+                        P4_EDU_OPEN: { text: "Yes", mapping: { openToMoreEducation: true } } as any,
+                        P4_EDU_CEIL: {
+                          text: "Master's degree or professional degree",
+                          mapping: { educationCeiling: "master" },
+                        } as any,
+                      } as Partial<Answers>)
+                    : ({
+                        P5_EDU_OPEN: { text: "Yes", mapping: { openToMoreEducation: true } } as any,
+                        P5_EDU_CEIL: {
+                          text: "Master's degree or professional degree",
+                          mapping: { educationCeiling: "master" },
+                        } as any,
+                      } as Partial<Answers>)
+                )
               }
               className="rounded border border-zinc-300 bg-white px-4 py-3 text-left text-sm text-zinc-900 hover:bg-zinc-50"
             >
               <div className="font-medium">Raise education ceiling</div>
-              <div className="mt-0.5 text-xs text-zinc-600">Example: bachelor.</div>
+              <div className="mt-0.5 text-xs text-zinc-600">Example: bachelor or master.</div>
             </button>
           ) : null}
 

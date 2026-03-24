@@ -1,26 +1,133 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #0f0e0c;
+  --paper: #f5f0e8;
+  --cream: #ede7d9;
+  --amber: #c8843a;
+  --amber-light: #e8a95a;
+  --sage: #5a7a6a;
+  --rust: #b05030;
+  --muted: #7a7060;
+  --card: #faf7f2;
+  --border: #d8cfc0;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans);
+  --font-serif: var(--font-playfair);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* Base button styles */
+.btn-primary {
+  background: var(--amber);
+  color: var(--ink);
+  padding: 0.85rem 2rem;
+  border-radius: 100px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-primary:hover {
+  background: var(--amber-light);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  padding: 0.85rem 2rem;
+  border-radius: 100px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border: 1.5px solid var(--border);
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-secondary:hover {
+  border-color: var(--ink);
+  background: var(--cream);
+}
+
+.btn-dark {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.85rem 2rem;
+  border-radius: 100px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-dark:hover {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+/* Card */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+}
+
+/* Form inputs */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+textarea,
+select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper);
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  color: var(--ink);
+  transition: border-color 0.2s;
+  outline: none;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--amber);
+}
+
+/* Fade-up animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

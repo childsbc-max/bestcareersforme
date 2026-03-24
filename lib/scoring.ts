@@ -34,17 +34,75 @@ export function scoreHolland(career: Career, top3: HollandLetter[]): number {
   return score;
 }
 
+export type MultiMajorQuestionId = "P3_MAJOR" | "P4_MAJOR" | "P5_MAJOR";
+
+export function readPrimaryMajorsForQuestion(answers: Answers, qId: MultiMajorQuestionId): string[] {
+  const mapping = (answers[qId] as any)?.mapping as Record<string, unknown> | undefined;
+  if (!mapping) return [];
+  const list = mapping.primaryMajors;
+  if (Array.isArray(list) && list.length > 0) {
+    return list.map((x) => String(x).trim()).filter(Boolean).slice(0, 4);
+  }
+  const legacy = mapping.primaryMajor;
+  if (typeof legacy === "string" && legacy.trim()) return [legacy.trim()];
+  return [];
+}
+
 function applyHardFilters(careers: Career[], answers: Answers, careerData: CareerData): Career[] {
   let result = [...careers];
 
-  // Persona 2: scope results based on current job and direction
   const personaId = (answers.personaId as any)?.value as string | undefined;
-  if (personaId === "P2") {
-    const currentSoc = (answers.P2_JOB as any)?.mapping?.soc as string | undefined;
-    const majorGroup = currentSoc ? normalizeSoc(currentSoc).slice(0, 2) : undefined;
-    const direction = (answers.P2_DIRECTION as any)?.mapping?.p2Direction as string | undefined;
-    if (majorGroup && (direction === "grow" || direction === "adjacent")) {
-      result = result.filter((c) => normalizeSoc(c.soc).startsWith(majorGroup));
+
+  // Persona 4: scope to related careers — use suggestedMajors overlap so Biology teacher doesn't get Architecture
+  if (personaId === "P4") {
+    const currentSoc = (answers.P4_JOB as any)?.mapping?.soc as string | undefined;
+    if (currentSoc) {
+      const currentCareer = (careerData.careers || []).find(
+        (c) => normalizeSoc(c.soc) === normalizeSoc(currentSoc)
+      );
+      const currentMajors = (currentCareer?.suggestedMajors || "")
+        .split("|")
+        .map((m) => m.trim().toLowerCase())
+        .filter(Boolean);
+
+      let byOverlap: typeof result = [];
+      if (currentMajors.length > 0) {
+        byOverlap = result.filter((c) => {
+          const suggested = (c.suggestedMajors || "")
+            .split("|")
+            .map((m) => m.trim().toLowerCase())
+            .filter(Boolean);
+          return suggested.some((s) => currentMajors.some((cm) => s.includes(cm) || cm.includes(s)));
+        });
+        if (byOverlap.length > 0) result = byOverlap;
+      }
+      const useSocFallback = currentMajors.length === 0 || byOverlap.length === 0;
+      if (useSocFallback) {
+        const broadPrefix = normalizeSoc(currentSoc).slice(0, 6);
+        if (broadPrefix.length >= 5) {
+          result = result.filter((c) => normalizeSoc(c.soc).startsWith(broadPrefix));
+        } else {
+          const majorGroup = normalizeSoc(currentSoc).slice(0, 2);
+          result = result.filter((c) => normalizeSoc(c.soc).startsWith(majorGroup));
+        }
+      }
+
+      // P4: filter by user's majors (OR) — keep careers that align with any selected field of study
+      const p4Majors = readPrimaryMajorsForQuestion(answers, "P4_MAJOR");
+      if (p4Majors.length > 0) {
+        result = result.filter((c) => {
+          const suggested = (c.suggestedMajors || "")
+            .split("|")
+            .map((m) => m.trim().toLowerCase())
+            .filter(Boolean);
+          if (suggested.length === 0) return true;
+          return p4Majors.some((raw) => {
+            const userMajor = String(raw || "").trim().toLowerCase();
+            if (!userMajor) return false;
+            return suggested.some((s) => s.includes(userMajor) || userMajor.includes(s));
+          });
+        });
+      }
     }
   }
 
@@ -56,22 +114,33 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
     });
   }
 
-  // Education ceiling (P1/P2/P3): if user is NOT open to more education, ceiling = completed.
-  // P3 (college/recent grad) assumes bachelor's; P1/P2 assume high school.
-  if (personaId === "P1" || personaId === "P2" || personaId === "P3") {
-    const completed = personaId === "P3" ? "bachelor" : "highschool";
+  // Education ceiling (P1/P3/P4/P5): if user is NOT open to more education, ceiling = completed.
+  // P4/P5 use *_EDU_COMPLETED when answered; P3 assumes bachelor's; P1 assumes high school.
+  if (personaId === "P1" || personaId === "P3" || personaId === "P4" || personaId === "P5") {
+    const completed =
+      personaId === "P4"
+        ? ((answers.P4_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined) ?? "bachelor"
+        : personaId === "P5"
+        ? ((answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined) ?? "bachelor"
+        : personaId === "P3"
+        ? "bachelor"
+        : "highschool";
     const open =
-      personaId === "P2"
-        ? ((answers.P2_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined)
-        : personaId === "P1"
+      personaId === "P1"
         ? ((answers.P1_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined)
+        : personaId === "P4"
+        ? ((answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined)
+        : personaId === "P5"
+        ? ((answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined)
         : ((answers.P3_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined);
     const ceiling =
       open === true
-        ? (personaId === "P2"
-            ? ((answers.P2_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
-            : personaId === "P1"
+        ? (personaId === "P1"
             ? ((answers.P1_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
+            : personaId === "P4"
+            ? ((answers.P4_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
+            : personaId === "P5"
+            ? ((answers.P5_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
             : ((answers.P3_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined))
         : completed;
 
@@ -134,7 +203,7 @@ function educationRankFromKey(key: string | undefined): number | null {
   return null;
 }
 
-function educationRankFromRequirement(req: string): number | null {
+export function educationRankFromRequirement(req: string): number | null {
   const r = String(req || "").toLowerCase();
   if (!r) return null;
   if (r.includes("high school")) return 0;
@@ -155,7 +224,7 @@ function educationRankFromRequirement(req: string): number | null {
   return null;
 }
 
-function experienceRankFromRequirement(req: string): number | null {
+export function experienceRankFromRequirement(req: string): number | null {
   const r = String(req || "").toLowerCase();
   if (!r) return 0;
   if (r.includes("none") || r.includes("no experience")) return 0;
@@ -179,6 +248,23 @@ function applyAiExclusions(careers: Career[], answers: Answers): Career[] {
   return careers;
 }
 
+/** How many of the user's major strings match the career's suggested majors list (OR semantics; each major counts at most once). */
+export function countSuggestedMajorMatches(suggestedMajorsRaw: string | undefined, userMajors: string[]): number {
+  if (!suggestedMajorsRaw || userMajors.length === 0) return 0;
+  const suggested = String(suggestedMajorsRaw).toLowerCase();
+  let count = 0;
+  for (const raw of userMajors) {
+    const major = String(raw || "").trim().toLowerCase();
+    if (!major) continue;
+    let matches = suggested.includes(major);
+    if (!matches && major === "accounting") {
+      matches = /finance|economics|business analytics/.test(suggested);
+    }
+    if (matches) count++;
+  }
+  return count;
+}
+
 function applySoftPenalties(careers: Career[], answers: Answers): Array<Career & { _softPenalty: number }> {
   const personaId = (answers.personaId as any)?.value as string | undefined;
   const workSetting = (answers.Q2 as any)?.mapping?.workSetting as string | undefined;
@@ -188,10 +274,19 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
   const physicalLevel = (answers.Q4 as any)?.mapping?.physicalDemandLevel as string | undefined;
   const physicalLevels = (answers.Q4 as any)?.mapping?.physicalDemandLevels as string[] | undefined;
 
-  const p3Major = (answers.P3_MAJOR as any)?.mapping?.primaryMajor as string | undefined;
   const p3MajorScope = (answers.P3_MAJOR_SCOPE as any)?.mapping?.p3MajorScope as string | undefined;
+  const p3Majors = personaId === "P3" ? readPrimaryMajorsForQuestion(answers, "P3_MAJOR") : [];
+  const p5Majors = personaId === "P5" ? readPrimaryMajorsForQuestion(answers, "P5_MAJOR") : [];
+  const p5MajorScope = (answers.P5_MAJOR_SCOPE as any)?.mapping?.p5MajorScope as string | undefined;
+  const p5EduCompletedKey = (answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
+  const p5CompletedRank = personaId === "P5" ? educationRankFromKey(p5EduCompletedKey) : null;
   const p3QualifiedNow = (answers.P3_QUALIFIED_NOW as any)?.mapping?.p3QualifiedNow as boolean | undefined;
   const p3ExperienceLevel = (answers.P3_EXPERIENCE as any)?.mapping?.p3ExperienceLevel as string | undefined;
+
+  const multiMajors =
+    personaId === "P3" ? p3Majors : personaId === "P5" ? p5Majors : [];
+  const multiScope =
+    personaId === "P3" ? p3MajorScope : personaId === "P5" ? p5MajorScope : undefined;
 
   return careers.map((c) => {
     let penalty = 0;
@@ -234,21 +329,19 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
       }
     }
 
-    // Persona 3: major alignment soft penalties
-    if (personaId === "P3" && p3Major && c.suggestedMajors) {
-      const major = String(p3Major || "").toLowerCase();
-      const suggested = String(c.suggestedMajors || "").toLowerCase();
-      let matchesMajor = suggested.includes(major);
-      // Accounting is related to Finance, Economics, Business Analytics (e.g. Actuaries, financial roles)
-      if (!matchesMajor && major === "accounting") {
-        matchesMajor = /finance|economics|business analytics/.test(suggested);
+    // Persona 3 / 5: up to four majors — OR match; extra overlap boosts ranking
+    if ((personaId === "P3" || personaId === "P5") && multiMajors.length > 0 && c.suggestedMajors) {
+      const matchCount = countSuggestedMajorMatches(c.suggestedMajors, multiMajors);
+      const matchesAny = matchCount >= 1;
+      if (multiScope === "direct") {
+        if (!matchesAny) penalty += 40;
+        if (matchCount >= 2) penalty -= 12 * (matchCount - 1);
+      } else if (multiScope === "adjacent") {
+        if (!matchesAny) penalty += 15;
+        if (matchCount >= 2) penalty -= 8 * (matchCount - 1);
+      } else if (multiScope === "any") {
+        if (matchCount >= 2) penalty -= 10 * (matchCount - 1);
       }
-      if (p3MajorScope === "direct") {
-        if (!matchesMajor) penalty += 40;
-      } else if (p3MajorScope === "adjacent") {
-        if (!matchesMajor) penalty += 15;
-      }
-      // "any" -> no penalty
     }
 
     // Persona 3: experience vs. experience requirements — only when user wants "qualified now"
@@ -279,6 +372,12 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
         penalty += 10;
       }
       // Bachelor's (3) and above: no penalty
+    }
+
+    // Persona 5: same soft nudge when user has completed bachelor's or higher
+    if (personaId === "P5" && p5CompletedRank != null && p5CompletedRank >= 3) {
+      const reqRank = educationRankFromRequirement(c.educationRequirements || "");
+      if (reqRank === 0) penalty += 10;
     }
 
     return { ...c, _softPenalty: penalty };
@@ -347,12 +446,11 @@ export type ScoringDebugInfo = {
   };
   applied: {
     personaId?: string;
-    p2Direction?: string;
-    p2MajorGroup?: string;
+    p4MajorGroup?: string;
     salaryFloor?: number;
     stateAbbr?: string;
     willingToRelocate?: boolean;
-    p2EducationCeiling?: string;
+    eduCeiling?: string;
     aiToleranceScale?: number;
     jobMarketWeight?: string;
   };
@@ -364,18 +462,23 @@ export function scoreAndRankCareersWithDebug(
   careerData: CareerData
 ): { results: Array<Career & { hollandScore: number }>; debug: ScoringDebugInfo } {
   const personaId = (answers.personaId as any)?.value as string | undefined;
-  const p2Direction = (answers.P2_DIRECTION as any)?.mapping?.p2Direction as string | undefined;
-  const p2Soc = (answers.P2_JOB as any)?.mapping?.soc as string | undefined;
-  const p2MajorGroup = p2Soc ? normalizeSoc(p2Soc).slice(0, 2) : undefined;
 
   const salaryFloor = (answers.Q5 as any)?.mapping?.salaryFloor as number | undefined;
   const stateAbbr = (answers.Q6 as any)?.value as string | undefined;
   const willingToRelocate = (answers.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
 
-  const openEdu = (answers.P2_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
-  const eduCeiling = personaId === "P2"
-    ? (openEdu === true ? ((answers.P2_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined) : "highschool")
-    : undefined;
+  const p4Soc = (answers.P4_JOB as any)?.mapping?.soc as string | undefined;
+  const p4MajorGroup = p4Soc ? normalizeSoc(p4Soc).slice(0, 2) : undefined;
+  const eduCeiling =
+    personaId === "P4"
+      ? ((answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation === true
+          ? ((answers.P4_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
+          : ((answers.P4_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined) ?? "bachelor")
+      : personaId === "P5"
+      ? ((answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation === true
+          ? ((answers.P5_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
+          : ((answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined) ?? "bachelor")
+      : undefined;
 
   const jobMarketWeight = (answers.Q8 as any)?.mapping?.jobMarketWeight as string | undefined;
   const aiToleranceScale = ((answers.Q9 as any)?.mapping?.aiToleranceScale ?? 3) as number;
@@ -390,12 +493,11 @@ export function scoreAndRankCareersWithDebug(
     },
     applied: {
       personaId,
-      p2Direction,
-      p2MajorGroup,
+      p4MajorGroup,
       salaryFloor,
       stateAbbr,
       willingToRelocate,
-      p2EducationCeiling: eduCeiling,
+      eduCeiling,
       aiToleranceScale,
       jobMarketWeight,
     },

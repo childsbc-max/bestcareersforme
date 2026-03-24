@@ -7,12 +7,27 @@ import careers from "@/data/careers.json";
 import majorsData from "@/data/majors.json";
 import quizData from "@/data/quiz-data.json";
 import type { Answers, P1Question, QuizData } from "@/lib/types";
+import { readPrimaryMajorsForQuestion, type MultiMajorQuestionId } from "@/lib/scoring";
 
 const QUIZ_STORAGE_KEY = "bestcareerfor.me:quiz_answers:v1";
 
-type PersonaId = "P1" | "P2" | "P3";
+type PersonaId = "P1" | "P3" | "P4" | "P5";
 
 const MAJORS = majorsData as string[];
+
+function isMultiMajorQuestionId(qId: string): qId is MultiMajorQuestionId {
+  return qId === "P3_MAJOR" || qId === "P4_MAJOR" || qId === "P5_MAJOR";
+}
+
+function majorMultiHint(qId: MultiMajorQuestionId): string {
+  if (qId === "P3_MAJOR") {
+    return "Add up to four majors or fields of study (what you studied or are studying). Matches use any of your selections; careers that align with more than one rank higher.";
+  }
+  if (qId === "P4_MAJOR") {
+    return "Add up to four majors or fields of study from your background. Matches use any of your selections; careers that align with more than one rank higher.";
+  }
+  return "Add up to four majors or fields of study. Results can match any of them; careers that align with more than one get a stronger match.";
+}
 
 type ClientQuestion =
   | {
@@ -22,7 +37,7 @@ type ClientQuestion =
       options: Array<{ personaId: PersonaId; title: string; subtitle: string }>;
     }
   | {
-      id: "P2_JOB";
+      id: "P4_JOB";
       kind: "jobSearch";
       text: string;
     }
@@ -74,19 +89,53 @@ type ClientQuestion =
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P2_DIRECTION";
+      id: "P4_EDU_COMPLETED";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P2_EDU_OPEN";
+      id: "P4_MAJOR";
+      kind: "majorSearch";
+      text: string;
+    }
+  | {
+      id: "P4_EDU_OPEN";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P2_EDU_CEIL";
+      id: "P4_EDU_CEIL";
+      kind: "singleChoice";
+      text: string;
+      options: Array<{ text: string; mapping: Record<string, unknown> }>;
+    }
+  | {
+      id: "P5_EDU_COMPLETED";
+      kind: "singleChoice";
+      text: string;
+      options: Array<{ text: string; mapping: Record<string, unknown> }>;
+    }
+  | {
+      id: "P5_MAJOR";
+      kind: "majorSearch";
+      text: string;
+    }
+  | {
+      id: "P5_MAJOR_SCOPE";
+      kind: "singleChoice";
+      text: string;
+      options: Array<{ text: string; mapping: Record<string, unknown> }>;
+    }
+  | {
+      id: "P5_EDU_OPEN";
+      kind: "singleChoice";
+      text: string;
+      options: Array<{ text: string; mapping: Record<string, unknown> }>;
+    }
+  | {
+      id: "P5_EDU_CEIL";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
@@ -168,14 +217,32 @@ export default function CareerQuizPage() {
       return [...base, ...p3Ceil, "P3_QUALIFIED_NOW", ...experienceQ, ...holland, ...shared];
     }
 
-    // Persona 2: current job, direction, education, holland, then shared preferences
-    const base = ["P2_JOB", "P2_DIRECTION", "P2_EDU_OPEN"];
-    const eduOpen = (answers.P2_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
-    const eduCeil = eduOpen === true ? ["P2_EDU_CEIL"] : [];
-    const holland = Array.from({ length: 7 }, (_, i) => `H${i + 1}`);
-    const shared = ["Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"];
-    return [...base, ...eduCeil, ...holland, ...shared];
-  }, [personaId, data.questionOrder, answers.P2_EDU_OPEN, answers.P1_EDU_OPEN, answers.P3_EDU_OPEN, answers.P3_QUALIFIED_NOW]);
+    // Persona 4: current job, education completed, major (skip if high school or certificate), education ceiling, holland, shared
+    if (personaId === "P4") {
+      const eduCompleted = (answers.P4_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
+      const skipMajor = eduCompleted === "highschool" || eduCompleted === "certificate";
+      const base = ["P4_JOB", "P4_EDU_COMPLETED", ...(skipMajor ? [] : ["P4_MAJOR"]), "P4_EDU_OPEN"];
+      const eduOpen = (answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+      const eduCeil = eduOpen === true ? ["P4_EDU_CEIL"] : [];
+      const holland = Array.from({ length: 7 }, (_, i) => `H${i + 1}`);
+      const shared = ["Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"];
+      return [...base, ...eduCeil, ...holland, ...shared];
+    }
+
+    // Persona 5: career change — education, background major + scope, no current-job filter
+    if (personaId === "P5") {
+      const eduCompleted = (answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
+      const skipMajor = eduCompleted === "highschool" || eduCompleted === "certificate";
+      const base = ["P5_EDU_COMPLETED", ...(skipMajor ? [] : ["P5_MAJOR", "P5_MAJOR_SCOPE"]), "P5_EDU_OPEN"];
+      const eduOpen = (answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+      const eduCeil = eduOpen === true ? ["P5_EDU_CEIL"] : [];
+      const holland = Array.from({ length: 7 }, (_, i) => `H${i + 1}`);
+      const shared = ["Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"];
+      return [...base, ...eduCeil, ...holland, ...shared];
+    }
+
+    return [];
+  }, [personaId, data.questionOrder, answers.P1_EDU_OPEN, answers.P3_EDU_OPEN, answers.P3_QUALIFIED_NOW, answers.P4_EDU_OPEN, answers.P4_EDU_COMPLETED, answers.P5_EDU_OPEN, answers.P5_EDU_COMPLETED]);
 
   const qId = questionOrder[index] || "";
 
@@ -192,19 +259,24 @@ export default function CareerQuizPage() {
             subtitle: "High school / early college — figuring out what to study",
           },
           {
-            personaId: "P2",
-            title: "Working right now",
-            subtitle: "High school grad currently working — thinking about what comes next",
-          },
-          {
             personaId: "P3",
             title: "In college / recent grad",
             subtitle: "College student or recent graduate — deciding what to do with your degree",
           },
+          {
+            personaId: "P4",
+            title: "Working Right Now, Looking to Advance",
+            subtitle: "Currently working — want to grow or move within your current line of work",
+          },
+          {
+            personaId: "P5",
+            title: "Exploring a career change",
+            subtitle: "Considering a new field or path — not tied to your current line of work",
+          },
         ],
       };
     }
-    if (qId === "P2_JOB") return { id: "P2_JOB", kind: "jobSearch", text: "What is your current job title?" };
+    if (qId === "P4_JOB") return { id: "P4_JOB", kind: "jobSearch", text: "What is your current job title?" };
     if (qId === "P3_MAJOR") {
       return {
         id: "P3_MAJOR",
@@ -297,21 +369,31 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P2_DIRECTION") {
+    if (qId === "P4_EDU_COMPLETED") {
       return {
-        id: "P2_DIRECTION",
+        id: "P4_EDU_COMPLETED",
         kind: "singleChoice",
-        text: "Which best describes what you are looking for?",
+        text: "What is the highest level of education you have completed?",
         options: [
-          { text: "I want to grow or advance within my current career field", mapping: { p2Direction: "grow" } },
-          { text: "I am open to something adjacent — related but different", mapping: { p2Direction: "adjacent" } },
-          { text: "I want to move into something completely different", mapping: { p2Direction: "different" } },
+          { text: "High school diploma or equivalent", mapping: { educationCompleted: "highschool" } },
+          { text: "Post-secondary certificate", mapping: { educationCompleted: "certificate" } },
+          { text: "Associate degree", mapping: { educationCompleted: "associate" } },
+          { text: "Bachelor's degree", mapping: { educationCompleted: "bachelor" } },
+          { text: "Master's degree", mapping: { educationCompleted: "master" } },
+          { text: "Doctoral / professional degree", mapping: { educationCompleted: "doctoral" } },
         ],
       };
     }
-    if (qId === "P2_EDU_OPEN") {
+    if (qId === "P4_MAJOR") {
       return {
-        id: "P2_EDU_OPEN",
+        id: "P4_MAJOR",
+        kind: "majorSearch",
+        text: "What did you study, or what are you currently studying?",
+      };
+    }
+    if (qId === "P4_EDU_OPEN") {
+      return {
+        id: "P4_EDU_OPEN",
         kind: "singleChoice",
         text: "Are you open to pursuing additional education or training to advance your career?",
         options: [
@@ -320,18 +402,72 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P2_EDU_CEIL") {
+    if (qId === "P4_EDU_CEIL") {
       return {
-        id: "P2_EDU_CEIL",
+        id: "P4_EDU_CEIL",
         kind: "singleChoice",
         text: "What is the highest level of education you would consider pursuing?",
         options: [
-          { text: "High school diploma or equivalent", mapping: { educationCeiling: "highschool" } },
-          { text: "Post-secondary certificate", mapping: { educationCeiling: "certificate" } },
-          { text: "Associate degree", mapping: { educationCeiling: "associate" } },
           { text: "Bachelor's degree", mapping: { educationCeiling: "bachelor" } },
-          { text: "Master's degree", mapping: { educationCeiling: "master" } },
-          { text: "Doctoral / professional degree", mapping: { educationCeiling: "doctoral" } },
+          { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } },
+          { text: "Doctoral or professional degree", mapping: { educationCeiling: "doctoral" } },
+        ],
+      };
+    }
+    if (qId === "P5_EDU_COMPLETED") {
+      return {
+        id: "P5_EDU_COMPLETED",
+        kind: "singleChoice",
+        text: "What is the highest level of education you have completed?",
+        options: [
+          { text: "High school diploma or equivalent", mapping: { educationCompleted: "highschool" } },
+          { text: "Post-secondary certificate", mapping: { educationCompleted: "certificate" } },
+          { text: "Associate degree", mapping: { educationCompleted: "associate" } },
+          { text: "Bachelor's degree", mapping: { educationCompleted: "bachelor" } },
+          { text: "Master's degree", mapping: { educationCompleted: "master" } },
+          { text: "Doctoral / professional degree", mapping: { educationCompleted: "doctoral" } },
+        ],
+      };
+    }
+    if (qId === "P5_MAJOR") {
+      return {
+        id: "P5_MAJOR",
+        kind: "majorSearch",
+        text: "What did you study, or what background do you bring from past education?",
+      };
+    }
+    if (qId === "P5_MAJOR_SCOPE") {
+      return {
+        id: "P5_MAJOR_SCOPE",
+        kind: "singleChoice",
+        text: "How should we use your background when suggesting career changes?",
+        options: [
+          { text: "Favor careers directly related to what I studied", mapping: { p5MajorScope: "direct" } },
+          { text: "Include adjacent fields too — I'm open to related paths", mapping: { p5MajorScope: "adjacent" } },
+          { text: "Don't lean on my major — match mainly to my interests and preferences", mapping: { p5MajorScope: "any" } },
+        ],
+      };
+    }
+    if (qId === "P5_EDU_OPEN") {
+      return {
+        id: "P5_EDU_OPEN",
+        kind: "singleChoice",
+        text: "Are you open to pursuing additional education or training for a new career direction?",
+        options: [
+          { text: "Yes", mapping: { openToMoreEducation: true } },
+          { text: "No — I want options based on what I already have", mapping: { openToMoreEducation: false } },
+        ],
+      };
+    }
+    if (qId === "P5_EDU_CEIL") {
+      return {
+        id: "P5_EDU_CEIL",
+        kind: "singleChoice",
+        text: "What is the highest level of education you would consider pursuing?",
+        options: [
+          { text: "Bachelor's degree", mapping: { educationCeiling: "bachelor" } },
+          { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } },
+          { text: "Doctoral or professional degree", mapping: { educationCeiling: "doctoral" } },
         ],
       };
     }
@@ -370,8 +506,13 @@ export default function CareerQuizPage() {
   function canContinue() {
     if (!q) return false;
     if ((q as any).kind === "persona") return Boolean((answers.personaId as any)?.value);
-    if ((q as any).kind === "jobSearch") return Boolean((answers.P2_JOB as any)?.mapping?.soc);
-    if ((q as any).kind === "majorSearch") return Boolean((answers.P3_MAJOR as any)?.mapping?.primaryMajor);
+    if ((q as any).kind === "jobSearch") return Boolean((answers[qId] as any)?.mapping?.soc);
+    if ((q as any).kind === "majorSearch") {
+      const row = answers[qId] as any;
+      const m = row?.mapping?.primaryMajors as unknown;
+      if (Array.isArray(m) && m.length > 0) return true;
+      return Boolean(row?.mapping?.primaryMajor);
+    }
     if ((q as any).inputType === "state") return Boolean((answers[qId] as any)?.value);
     if (qId === "Q3" || qId === "Q4") {
       const selected = ((answers[qId] as any)?.mapping?.selectedTexts as string[]) || [];
@@ -456,13 +597,14 @@ export default function CareerQuizPage() {
         <div className="mt-6">
           <input
             className="w-full rounded border border-zinc-300 bg-white p-3 text-zinc-900"
-            value={jobQuery}
+            value={jobQuery || (answers[qId] as any)?.text || ""}
             onChange={(e) => setJobQuery(e.target.value)}
             placeholder="Start typing a job title…"
           />
           <div className="mt-3 max-h-64 overflow-auto rounded border border-zinc-300 bg-white">
             {(() => {
               const q = jobQuery.trim().toLowerCase();
+              const jobKey = qId as "P4_JOB";
               if (q.length < 2) {
                 return <div className="p-3 text-sm text-zinc-600">Type at least 2 characters to search.</div>;
               }
@@ -481,7 +623,7 @@ export default function CareerQuizPage() {
                     onClick={() => {
                       persist({
                         ...answers,
-                        P2_JOB: {
+                        [jobKey]: {
                           text: String(c.name),
                           mapping: { soc: String(c.soc), socMajorGroup: getSocMajorGroup(String(c.soc)) },
                         },
@@ -501,56 +643,94 @@ export default function CareerQuizPage() {
                 ));
             })()}
           </div>
-          {(answers.P2_JOB as any)?.mapping?.soc ? (
+          {(answers[qId] as any)?.mapping?.soc ? (
             <p className="mt-2 text-sm text-zinc-600">
-              Selected: <span className="font-medium text-zinc-900">{(answers.P2_JOB as any)?.text}</span>
+              Selected: <span className="font-medium text-zinc-900">{(answers[qId] as any)?.text}</span>
             </p>
           ) : null}
         </div>
       ) : (q as any).kind === "majorSearch" ? (
-        <div className="mt-6">
-          <input
-            className="w-full rounded border border-zinc-300 bg-white p-3 text-zinc-900"
-            value={majorQuery}
-            onChange={(e) => setMajorQuery(e.target.value)}
-            placeholder="Start typing your major…"
-          />
-          <div className="mt-3 max-h-64 overflow-auto rounded border border-zinc-300 bg-white">
+        isMultiMajorQuestionId(qId) ? (
+          <div className="mt-6 space-y-3">
+            <p className="text-sm text-zinc-600">{majorMultiHint(qId)}</p>
+            <input
+              className="w-full rounded border border-zinc-300 bg-white p-3 text-zinc-900"
+              value={majorQuery}
+              onChange={(e) => setMajorQuery(e.target.value)}
+              placeholder="Search and add each major…"
+            />
             {(() => {
-              const qry = majorQuery.trim().toLowerCase();
-              if (qry.length < 2) {
-                return <div className="p-3 text-sm text-zinc-600">Type at least 2 characters to search.</div>;
-              }
-              return (MAJORS || [])
-                .filter((m) => String(m || "").toLowerCase().includes(qry))
-                .slice(0, 50)
-                .map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => {
-                      persist({
-                        ...answers,
-                        P3_MAJOR: {
-                          text: String(m),
-                          mapping: { primaryMajor: String(m) },
-                        },
-                      });
-                      setMajorQuery(String(m));
-                    }}
-                    className="block w-full border-b border-zinc-200 p-3 text-left text-sm text-zinc-900 hover:bg-zinc-50"
-                  >
-                    <div className="font-medium">{m}</div>
-                  </button>
-                ));
+              const cur = readPrimaryMajorsForQuestion(answers, qId);
+              return cur.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {cur.map((m) => (
+                    <span
+                      key={m}
+                      className="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1 text-sm text-zinc-900"
+                    >
+                      {m}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${m}`}
+                        onClick={() => {
+                          const next = cur.filter((x) => x !== m);
+                          const nextAnswers = { ...answers };
+                          if (next.length > 0) {
+                            (nextAnswers as any)[qId] = {
+                              text: next.join(", "),
+                              mapping: { primaryMajors: next, primaryMajor: next[0] },
+                            };
+                          } else {
+                            delete (nextAnswers as any)[qId];
+                          }
+                          persist(nextAnswers as Answers);
+                        }}
+                        className="ml-0.5 rounded px-1 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null;
             })()}
+            <div className="max-h-64 overflow-auto rounded border border-zinc-300 bg-white">
+              {(() => {
+                const cur = readPrimaryMajorsForQuestion(answers, qId);
+                const qry = majorQuery.trim().toLowerCase();
+                if (qry.length < 2) {
+                  return <div className="p-3 text-sm text-zinc-600">Type at least 2 characters to search.</div>;
+                }
+                return (MAJORS || [])
+                  .filter((m) => String(m || "").toLowerCase().includes(qry))
+                  .slice(0, 50)
+                  .map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        if (cur.length >= 4) return;
+                        if (cur.some((x) => x.toLowerCase() === String(m).toLowerCase())) return;
+                        const next = [...cur, String(m)];
+                        persist({
+                          ...answers,
+                          [qId]: {
+                            text: next.join(", "),
+                            mapping: { primaryMajors: next, primaryMajor: next[0] },
+                          },
+                        });
+                        setMajorQuery("");
+                      }}
+                      className="block w-full border-b border-zinc-200 p-3 text-left text-sm text-zinc-900 hover:bg-zinc-50 disabled:opacity-40"
+                      disabled={cur.length >= 4 || cur.some((x) => x.toLowerCase() === String(m).toLowerCase())}
+                    >
+                      <div className="font-medium">{m}</div>
+                    </button>
+                  ));
+              })()}
+            </div>
           </div>
-          {(answers.P3_MAJOR as any)?.mapping?.primaryMajor ? (
-            <p className="mt-2 text-sm text-zinc-600">
-              Selected: <span className="font-medium text-zinc-900">{(answers.P3_MAJOR as any)?.text}</span>
-            </p>
-          ) : null}
-        </div>
+        ) : null
       ) : null}
 
       {(q as any).inputType === "state" ? (
