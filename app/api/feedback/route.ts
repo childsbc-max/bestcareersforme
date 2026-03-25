@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const { feedback, answers, debug } = body;
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: "bestcareerfor.me <onboarding@resend.dev>",
       to: "contact@brianchilds.me",
       subject: "New Quiz Feedback",
@@ -18,6 +18,12 @@ export async function POST(req: Request) {
       ].join("\n"),
     });
 
+    if (error) {
+      console.error("RESEND_ERROR", JSON.stringify(error));
+      return NextResponse.json({ ok: false, error }, { status: 400 });
+    }
+
+    console.log("RESEND_SUCCESS", data?.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("FEEDBACK_ERROR", e);
