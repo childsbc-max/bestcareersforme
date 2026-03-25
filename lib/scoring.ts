@@ -34,7 +34,14 @@ export function scoreHolland(career: Career, top3: HollandLetter[]): number {
   return score;
 }
 
-export type MultiMajorQuestionId = "P3_MAJOR" | "P4_MAJOR" | "P5_MAJOR";
+export type MultiMajorQuestionId =
+  | "P3_MAJOR"
+  | "P4_MAJOR"
+  | "P5_MAJOR"
+  | "P1_EDU_INTEREST_MAJORS"
+  | "P3_EDU_INTEREST_MAJORS"
+  | "P4_EDU_INTEREST_MAJORS"
+  | "P5_EDU_INTEREST_MAJORS";
 
 export function readPrimaryMajorsForQuestion(answers: Answers, qId: MultiMajorQuestionId): string[] {
   const mapping = (answers[qId] as any)?.mapping as Record<string, unknown> | undefined;
@@ -48,15 +55,86 @@ export function readPrimaryMajorsForQuestion(answers: Answers, qId: MultiMajorQu
   return [];
 }
 
+function unionMajors(a: string[], b: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of [...a, ...b]) {
+    const s = String(raw || "").trim();
+    if (!s) continue;
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+function majorsMatchCareerSuggestedMajors(userMajors: string[], careerSuggestedMajors: string | undefined): boolean {
+  if (userMajors.length === 0) return true;
+  const suggested = (careerSuggestedMajors || "")
+    .split("|")
+    .map((m) => m.trim().toLowerCase())
+    .filter(Boolean);
+  if (suggested.length === 0) return true;
+  return userMajors.some((raw) => {
+    const userMajor = String(raw || "").trim().toLowerCase();
+    if (!userMajor) return false;
+    return suggested.some((s) => s.includes(userMajor) || userMajor.includes(s));
+  });
+}
+
+function effectiveMajorsForPersona(answers: Answers, personaId: string | undefined): string[] {
+  if (!personaId) return [];
+  if (personaId === "P1") {
+    const open = (answers.P1_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+    if (open !== true) return [];
+    return readPrimaryMajorsForQuestion(answers, "P1_EDU_INTEREST_MAJORS");
+  }
+  if (personaId === "P3") {
+    const base = readPrimaryMajorsForQuestion(answers, "P3_MAJOR");
+    const open = (answers.P3_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+    const interest = open === true ? readPrimaryMajorsForQuestion(answers, "P3_EDU_INTEREST_MAJORS") : [];
+    return unionMajors(base, interest);
+  }
+  if (personaId === "P4") {
+    const base = readPrimaryMajorsForQuestion(answers, "P4_MAJOR");
+    const open = (answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+    const interest = open === true ? readPrimaryMajorsForQuestion(answers, "P4_EDU_INTEREST_MAJORS") : [];
+    return unionMajors(base, interest);
+  }
+  if (personaId === "P5") {
+    const base = readPrimaryMajorsForQuestion(answers, "P5_MAJOR");
+    const open = (answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+    const interest = open === true ? readPrimaryMajorsForQuestion(answers, "P5_EDU_INTEREST_MAJORS") : [];
+    return unionMajors(base, interest);
+  }
+  return [];
+}
+
 function applyHardFilters(careers: Career[], answers: Answers, careerData: CareerData): Career[] {
   let result = [...careers];
 
   const personaId = (answers.personaId as any)?.value as string | undefined;
 
+  // P1: when open to more education, filter toward intended areas of study (OR)
+  if (personaId === "P1") {
+    const p1Majors = effectiveMajorsForPersona(answers, personaId);
+    if (p1Majors.length > 0) {
+      result = result.filter((c) => majorsMatchCareerSuggestedMajors(p1Majors, c.suggestedMajors));
+    }
+  }
+
   // Persona 4: scope to related careers — use suggestedMajors overlap so Biology teacher doesn't get Architecture
   if (personaId === "P4") {
     const currentSoc = (answers.P4_JOB as any)?.mapping?.soc as string | undefined;
     if (currentSoc) {
+      // If user is open to more education and picked interest majors, broaden scope:
+      // keep careers adjacent to current job OR careers aligned with intended study areas.
+      const p4Open = (answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
+      const p4InterestedMajors =
+        p4Open === true ? readPrimaryMajorsForQuestion(answers, "P4_EDU_INTEREST_MAJORS") : [];
+
       const currentCareer = (careerData.careers || []).find(
         (c) => normalizeSoc(c.soc) === normalizeSoc(currentSoc)
       );
@@ -65,43 +143,47 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
         .map((m) => m.trim().toLowerCase())
         .filter(Boolean);
 
+      // 1) Job-adjacent set (existing behavior)
+      let jobScoped: typeof result = [...result];
       let byOverlap: typeof result = [];
       if (currentMajors.length > 0) {
-        byOverlap = result.filter((c) => {
+        byOverlap = jobScoped.filter((c) => {
           const suggested = (c.suggestedMajors || "")
             .split("|")
             .map((m) => m.trim().toLowerCase())
             .filter(Boolean);
           return suggested.some((s) => currentMajors.some((cm) => s.includes(cm) || cm.includes(s)));
         });
-        if (byOverlap.length > 0) result = byOverlap;
+        if (byOverlap.length > 0) jobScoped = byOverlap;
       }
       const useSocFallback = currentMajors.length === 0 || byOverlap.length === 0;
       if (useSocFallback) {
         const broadPrefix = normalizeSoc(currentSoc).slice(0, 6);
         if (broadPrefix.length >= 5) {
-          result = result.filter((c) => normalizeSoc(c.soc).startsWith(broadPrefix));
+          jobScoped = jobScoped.filter((c) => normalizeSoc(c.soc).startsWith(broadPrefix));
         } else {
           const majorGroup = normalizeSoc(currentSoc).slice(0, 2);
-          result = result.filter((c) => normalizeSoc(c.soc).startsWith(majorGroup));
+          jobScoped = jobScoped.filter((c) => normalizeSoc(c.soc).startsWith(majorGroup));
         }
       }
 
+      // 2) Interested-majors set (new behavior; broadens beyond current SOC neighborhood)
+      if (p4InterestedMajors.length > 0) {
+        const interestScoped = result.filter((c) =>
+          majorsMatchCareerSuggestedMajors(p4InterestedMajors, c.suggestedMajors)
+        );
+        const bySoc = new Map<string, Career>();
+        for (const c of jobScoped) bySoc.set(normalizeSoc(c.soc), c);
+        for (const c of interestScoped) bySoc.set(normalizeSoc(c.soc), c);
+        result = Array.from(bySoc.values());
+      } else {
+        result = jobScoped;
+      }
+
       // P4: filter by user's majors (OR) — keep careers that align with any selected field of study
-      const p4Majors = readPrimaryMajorsForQuestion(answers, "P4_MAJOR");
+      const p4Majors = effectiveMajorsForPersona(answers, personaId);
       if (p4Majors.length > 0) {
-        result = result.filter((c) => {
-          const suggested = (c.suggestedMajors || "")
-            .split("|")
-            .map((m) => m.trim().toLowerCase())
-            .filter(Boolean);
-          if (suggested.length === 0) return true;
-          return p4Majors.some((raw) => {
-            const userMajor = String(raw || "").trim().toLowerCase();
-            if (!userMajor) return false;
-            return suggested.some((s) => s.includes(userMajor) || userMajor.includes(s));
-          });
-        });
+        result = result.filter((c) => majorsMatchCareerSuggestedMajors(p4Majors, c.suggestedMajors));
       }
     }
   }
@@ -275,8 +357,8 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
   const physicalLevels = (answers.Q4 as any)?.mapping?.physicalDemandLevels as string[] | undefined;
 
   const p3MajorScope = (answers.P3_MAJOR_SCOPE as any)?.mapping?.p3MajorScope as string | undefined;
-  const p3Majors = personaId === "P3" ? readPrimaryMajorsForQuestion(answers, "P3_MAJOR") : [];
-  const p5Majors = personaId === "P5" ? readPrimaryMajorsForQuestion(answers, "P5_MAJOR") : [];
+  const p3Majors = personaId === "P3" ? effectiveMajorsForPersona(answers, personaId) : [];
+  const p5Majors = personaId === "P5" ? effectiveMajorsForPersona(answers, personaId) : [];
   const p5MajorScope = (answers.P5_MAJOR_SCOPE as any)?.mapping?.p5MajorScope as string | undefined;
   const p5EduCompletedKey = (answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
   const p5CompletedRank = personaId === "P5" ? educationRankFromKey(p5EduCompletedKey) : null;
@@ -447,6 +529,7 @@ export type ScoringDebugInfo = {
   applied: {
     personaId?: string;
     p4MajorGroup?: string;
+    effectiveMajorsCount?: number;
     salaryFloor?: number;
     stateAbbr?: string;
     willingToRelocate?: boolean;
@@ -462,6 +545,7 @@ export function scoreAndRankCareersWithDebug(
   careerData: CareerData
 ): { results: Array<Career & { hollandScore: number }>; debug: ScoringDebugInfo } {
   const personaId = (answers.personaId as any)?.value as string | undefined;
+  const effectiveMajorsCount = effectiveMajorsForPersona(answers, personaId).length;
 
   const salaryFloor = (answers.Q5 as any)?.mapping?.salaryFloor as number | undefined;
   const stateAbbr = (answers.Q6 as any)?.value as string | undefined;
@@ -494,6 +578,7 @@ export function scoreAndRankCareersWithDebug(
     applied: {
       personaId,
       p4MajorGroup,
+      effectiveMajorsCount,
       salaryFloor,
       stateAbbr,
       willingToRelocate,
