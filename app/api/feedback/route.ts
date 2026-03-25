@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
       from: "bestcareerfor.me <onboarding@resend.dev>",
-      to: "contact@brianchilds.me",
+      to: "childsbc@gmail.com",
       subject: "New Quiz Feedback",
       text: [
         `FEEDBACK:\n${feedback}`,
