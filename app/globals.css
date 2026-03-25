@@ -126,6 +126,19 @@ select:focus {
   border-color: var(--amber);
 }
 
+/* Logo */
+.logo {
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.logo-accent {
+  color: var(--amber);
+  font-style: italic;
+}
+
 /* Fade-up animation */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }

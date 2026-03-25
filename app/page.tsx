@@ -31,18 +31,8 @@ export default function Home() {
           zIndex: 100,
         }}
       >
-        <a
-          href="/"
-          style={{
-            fontFamily: "var(--font-playfair), 'Playfair Display', serif",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-            textDecoration: "none",
-            color: "var(--ink)",
-          }}
-        >
-          best<em style={{ color: "var(--amber)", fontStyle: "italic" }}>job</em>for.me
+        <a href="/" style={{ textDecoration: "none" }}>
+          <span className="logo">best<span className="logo-accent">career</span>for.me</span>
         </a>
 
         <ul
@@ -265,7 +255,7 @@ export default function Home() {
                   marginBottom: "0.8rem",
                 }}
               >
-                <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>UX Researcher</div>
+                <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>Logistics Engineers</div>
                 <div
                   style={{
                     background: "var(--amber)",
@@ -283,7 +273,7 @@ export default function Home() {
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.82rem", color: "var(--muted)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                   <DollarSign size={13} aria-hidden="true" />
-                  $74,000 – $115,000
+                  $63,000 – $104,000
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                   <MapPin size={13} aria-hidden="true" />
