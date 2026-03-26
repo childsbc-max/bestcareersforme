@@ -256,7 +256,16 @@ export default function CareerQuizPage() {
         return;
       }
       const raw = localStorage.getItem(QUIZ_STORAGE_KEY);
-      if (raw) setAnswers(JSON.parse(raw) as Answers);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Answers;
+        const savedPersona = (parsed.personaId as any)?.value as string | undefined;
+        if (savedPersona && !["P1", "P3", "P4", "P5"].includes(savedPersona)) {
+          // Stale persona from an old version — reset so the user starts fresh
+          localStorage.removeItem(QUIZ_STORAGE_KEY);
+        } else {
+          setAnswers(parsed);
+        }
+      }
     } catch {
       // ignore storage errors in MVP
     }
@@ -264,8 +273,10 @@ export default function CareerQuizPage() {
 
   const personaId = (answers.personaId as any)?.value as PersonaId | undefined;
 
+  const KNOWN_PERSONAS = ["P1", "P3", "P4", "P5"];
+
   const questionOrder: string[] = useMemo(() => {
-    if (!personaId) return ["PERSONA"];
+    if (!personaId || !KNOWN_PERSONAS.includes(personaId)) return ["PERSONA"];
     if (personaId === "P1") {
       const p1Base = ["P1_EDU_OPEN"];
       const p1Open = (answers.P1_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
