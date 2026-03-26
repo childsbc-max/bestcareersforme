@@ -50,6 +50,8 @@ export type Career = {
   name: string;
   salaryLow: number;
   medianSalary: number;
+  salaryHigh?: number;
+  nationalEmployment?: number;
   aiReplacementRisk: number;
   hollandCode: string;
   suggestedMajors?: string;

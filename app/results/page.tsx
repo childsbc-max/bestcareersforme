@@ -442,8 +442,9 @@ export default function ResultsPage() {
 
                 // Salary bar (scale: $0–$250k)
                 const SALARY_MAX = 250000;
+                const salaryTop = c.salaryHigh || c.medianSalary || 0;
                 const salaryLowPct = Math.min(98, Math.round(((c.salaryLow || 0) / SALARY_MAX) * 100));
-                const salaryRangePct = Math.min(98 - salaryLowPct, Math.round((((c.medianSalary || 0) - (c.salaryLow || 0)) / SALARY_MAX) * 100));
+                const salaryRangePct = Math.min(98 - salaryLowPct, Math.round(((salaryTop - (c.salaryLow || 0)) / SALARY_MAX) * 100));
 
                 return (
                   <article
@@ -498,7 +499,7 @@ export default function ResultsPage() {
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
                           <span style={{ fontSize: "0.68rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Salary range</span>
                           <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--ink)" }}>
-                            ${Math.round((c.salaryLow || 0) / 1000)}k – ${Math.round((c.medianSalary || 0) / 1000)}k
+                            ${Math.round((c.salaryLow || 0) / 1000)}k – ${Math.round(salaryTop / 1000)}k
                           </span>
                         </div>
                         <div style={{ position: "relative", height: 6, borderRadius: 3, background: "var(--border)" }}>
