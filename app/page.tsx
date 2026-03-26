@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { ArrowRight, MapPin, DollarSign, GraduationCap, Briefcase, Bot, TrendingUp } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Free Career Quiz — Find the Right Career for You | bestjobfor.me",
+  title: "Free Career Quiz — Find the Right Career for You | bestcareerfor.me",
   description:
     "Answer a few questions and discover careers matched to your interests, salary goals, work style, and life situation. Free data-driven career quiz — results in about 10 minutes.",
   openGraph: {
     title: "Free Career Quiz — Find the Right Career for You",
     description:
       "A career quiz that factors in salary, job demand, education, work experience, and AI risk — not just your interests.",
-    url: "https://bestjobfor.me",
-    siteName: "bestjobfor.me",
+    url: "https://bestcareerfor.me",
+    siteName: "bestcareerfor.me",
   },
 };
 
@@ -526,7 +526,7 @@ export default function Home() {
           fontSize: "0.85rem",
         }}
       >
-        © 2025 bestjobfor.me · A data-driven career quiz built for real life.
+        © 2025 bestcareerfor.me · A data-driven career quiz built for real life.
       </footer>
     </>
   );

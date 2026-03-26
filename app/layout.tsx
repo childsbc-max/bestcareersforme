@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "bestjobfor.me — Find Your Career Match",
+  title: "bestcareerfor.me — Find Your Career Match",
   description: "Answer a few questions and discover careers matched to your interests, goals, and life situation.",
 };
 
