@@ -299,7 +299,7 @@ export default function CareerQuizPage() {
 
     if (personaId === "P4") {
       const eduCompleted = (answers.P4_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
-      const skipMajor = eduCompleted === "highschool" || eduCompleted === "certificate";
+      const skipMajor = eduCompleted === "lessthanhs" || eduCompleted === "highschool" || eduCompleted === "certificate" || eduCompleted === "somecollege";
       const base = ["P4_JOB", "P4_EDU_COMPLETED", ...(skipMajor ? [] : ["P4_MAJOR"]), "P4_EDU_OPEN"];
       const eduOpen = (answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
       const eduInterest = eduOpen === true ? ["P4_EDU_INTEREST_MAJORS"] : [];
@@ -311,7 +311,7 @@ export default function CareerQuizPage() {
 
     if (personaId === "P5") {
       const eduCompleted = (answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
-      const skipMajor = eduCompleted === "highschool" || eduCompleted === "certificate";
+      const skipMajor = eduCompleted === "lessthanhs" || eduCompleted === "highschool" || eduCompleted === "certificate" || eduCompleted === "somecollege";
       const base = ["P5_EDU_COMPLETED", ...(skipMajor ? [] : ["P5_MAJOR", "P5_MAJOR_SCOPE"]), "P5_EDU_OPEN"];
       const eduOpen = (answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
       const eduInterest = eduOpen === true ? ["P5_EDU_INTEREST_MAJORS"] : [];
@@ -457,8 +457,10 @@ export default function CareerQuizPage() {
         kind: "singleChoice",
         text: "What is the highest level of education you have completed?",
         options: [
+          { text: "Less than high school", mapping: { educationCompleted: "lessthanhs" } },
           { text: "High school diploma or equivalent", mapping: { educationCompleted: "highschool" } },
           { text: "Post-secondary certificate", mapping: { educationCompleted: "certificate" } },
+          { text: "Some college", mapping: { educationCompleted: "somecollege" } },
           { text: "Associate degree", mapping: { educationCompleted: "associate" } },
           { text: "Bachelor's degree", mapping: { educationCompleted: "bachelor" } },
           { text: "Master's degree", mapping: { educationCompleted: "master" } },
@@ -501,8 +503,10 @@ export default function CareerQuizPage() {
         kind: "singleChoice",
         text: "What is the highest level of education you have completed?",
         options: [
+          { text: "Less than high school", mapping: { educationCompleted: "lessthanhs" } },
           { text: "High school diploma or equivalent", mapping: { educationCompleted: "highschool" } },
           { text: "Post-secondary certificate", mapping: { educationCompleted: "certificate" } },
+          { text: "Some college", mapping: { educationCompleted: "somecollege" } },
           { text: "Associate degree", mapping: { educationCompleted: "associate" } },
           { text: "Bachelor's degree", mapping: { educationCompleted: "bachelor" } },
           { text: "Master's degree", mapping: { educationCompleted: "master" } },

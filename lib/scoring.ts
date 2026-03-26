@@ -276,8 +276,10 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
 function educationRankFromKey(key: string | undefined): number | null {
   if (!key) return null;
   const k = key.toLowerCase();
+  if (k.includes("lessthan") || k === "less") return -1;
   if (k.includes("high")) return 0;
   if (k.includes("cert")) return 1;
+  if (k.includes("somecollege") || k === "some") return 1.5;
   if (k.includes("assoc")) return 2;
   if (k.includes("bach")) return 3;
   if (k.includes("mast")) return 4;
@@ -288,8 +290,10 @@ function educationRankFromKey(key: string | undefined): number | null {
 export function educationRankFromRequirement(req: string): number | null {
   const r = String(req || "").toLowerCase();
   if (!r) return null;
+  if (r.includes("less than")) return -1;
   if (r.includes("high school")) return 0;
   if (r.includes("certificate")) return 1;
+  if (r.includes("some college")) return 1.5;
   if (r.includes("associate")) return 2;
   if (r.includes("bachelor")) return 3;
   if (r.includes("master")) return 4;
