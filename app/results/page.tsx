@@ -254,7 +254,7 @@ export default function ResultsPage() {
 
   return (
     <>
-      <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
+      <div className="results-wrapper" style={{ background: "var(--paper)", minHeight: "100vh" }}>
         <main className="results-main" style={{ maxWidth: 720, margin: "0 auto", padding: "2rem 2rem 6rem" }}>
 
           {/* Nav */}
@@ -408,7 +408,8 @@ export default function ResultsPage() {
               results.map((c) => {
                 const demandLevel = selectedState ? getDemandForCareerInState(c.soc) : (c.currentDemand || null);
                 const expanded = expandedCards.has(c.soc);
-                const matchPct = Math.round(((c.hollandScore || 0) / 9) * 100);
+                const hollandForBar = c.hollandScore || 0;
+                const matchPct = Math.min(100, Math.round((hollandForBar / 6) * 100));
                 const aiRisk = Number(c.aiReplacementRisk || 0);
                 const aiLabel = aiRisk < 40 ? "Low AI risk" : aiRisk < 70 ? "Moderate AI risk" : "High AI risk";
                 const aiColor = aiRisk < 40 ? "var(--sage)" : aiRisk < 70 ? "var(--amber)" : "var(--rust)";
@@ -483,11 +484,18 @@ export default function ResultsPage() {
                         )}
                       </div>
 
-                      {/* Match score bar */}
+                      {/* Interest match bar */}
                       <div style={{ marginBottom: "0.85rem" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-                          <span style={{ fontSize: "0.68rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Match score</span>
-                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--ink)" }}>{c.hollandScore || 0} / 9</span>
+                          <span style={{ fontSize: "0.68rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Interest match</span>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--ink)" }}>
+                            {(() => {
+                              const h = hollandForBar;
+                              const r = Math.round(h * 10) / 10;
+                              return Number.isInteger(r) ? `${r}` : r.toFixed(1);
+                            })()}{" "}
+                            / 6
+                          </span>
                         </div>
                         <div style={{ height: 6, borderRadius: 3, background: "var(--border)" }}>
                           <div style={{ height: 6, borderRadius: 3, background: "var(--amber)", width: `${matchPct}%`, transition: "width 0.3s" }} />
@@ -717,9 +725,6 @@ export default function ResultsPage() {
       />
 
       <style>{`
-        @media (min-width: 900px) {
-          .results-main { padding-right: calc(2rem + 260px) !important; }
-        }
         .want-more-btn:hover { border-color: var(--amber) !important; background: var(--cream) !important; }
       `}</style>
     </>

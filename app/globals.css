@@ -174,12 +174,16 @@ select:focus {
   transform: none !important;
 }
 
-/* Quiz desktop layout: reserve right column for fixed sidebar, widen content */
+/* Desktop layout: reserve right column for fixed sidebar, widen content */
 @media (min-width: 900px) {
-  .quiz-wrapper {
+  .quiz-wrapper,
+  .results-wrapper {
     padding-right: 260px;
   }
   .quiz-main {
+    max-width: 860px !important;
+  }
+  .results-main {
     max-width: 860px !important;
   }
 }
