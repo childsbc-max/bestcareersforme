@@ -35,6 +35,7 @@ const QUESTION_LABELS: Record<string, string> = {
   P5_EDU_OPEN: "Open to more school?",
   P5_EDU_INTEREST_MAJORS: "Interest areas",
   P5_EDU_CEIL: "Education ceiling",
+  P5_FACTOR_SOURCE: "Experience impact",
 };
 
 const PERSONA_TITLES: Record<string, string> = {
