@@ -722,6 +722,10 @@ export default function ResultsPage() {
         answers={answers}
         answeredIds={answeredSidebarIds}
         quizData={quizData as QuizData}
+        onJumpTo={(qId) => {
+          try { sessionStorage.setItem("quiz:jumpTo", qId); } catch { /* ignore */ }
+          router.push("/career-quiz");
+        }}
       />
 
       <style>{`

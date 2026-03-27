@@ -364,6 +364,18 @@ export default function CareerQuizPage() {
     answers.P5_EDU_COMPLETED,
   ]);
 
+  // Jump to a specific question when navigating back from the results page
+  useEffect(() => {
+    if (!mounted || questionOrder.length === 0) return;
+    try {
+      const target = sessionStorage.getItem("quiz:jumpTo");
+      if (!target) return;
+      sessionStorage.removeItem("quiz:jumpTo");
+      const idx = questionOrder.indexOf(target);
+      if (idx >= 0) setIndex(idx);
+    } catch { /* ignore */ }
+  }, [mounted, questionOrder]);
+
   const qId = questionOrder[index] || "";
 
   const q: ClientQuestion | null = useMemo(() => {
@@ -696,7 +708,10 @@ export default function CareerQuizPage() {
   function jumpToQuestion(qId: string) {
     if (qId === "PERSONA") return;
     const idx = questionOrder.indexOf(qId);
-    if (idx >= 0) setIndex(idx);
+    if (idx >= 0) {
+      setIndex(idx);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   if (!mounted) {
