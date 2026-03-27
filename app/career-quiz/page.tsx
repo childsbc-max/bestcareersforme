@@ -90,6 +90,17 @@ type ClientQuestion =
       text: string;
     }
   | {
+      id: "P5_FACTOR_SOURCE";
+      kind: "singleChoice";
+      text: string;
+      options: Array<{ text: string; mapping: Record<string, unknown> }>;
+    }
+  | {
+      id: "P5_JOB";
+      kind: "jobSearch";
+      text: string;
+    }
+  | {
       id: "P3_MAJOR";
       kind: "majorSearch";
       text: string;
@@ -208,6 +219,12 @@ type ClientQuestion =
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
+  | {
+      id: "P5_JOB_SCOPE";
+      kind: "singleChoice";
+      text: string;
+      options: Array<{ text: string; mapping: Record<string, unknown> }>;
+    }
   | (P1Question & { kind?: never })
   | (QuizData["hollandQuestions"][number] & { kind?: never; inputType?: never });
 
@@ -310,9 +327,21 @@ export default function CareerQuizPage() {
     }
 
     if (personaId === "P5") {
+      const factor = (answers.P5_FACTOR_SOURCE as any)?.mapping?.p5FactorSource as string | undefined;
+      const wantsEdu = factor === "edu" || factor === "both";
+      const wantsJob = factor === "job" || factor === "both";
+
       const eduCompleted = (answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
-      const skipMajor = eduCompleted === "lessthanhs" || eduCompleted === "highschool" || eduCompleted === "certificate" || eduCompleted === "somecollege";
-      const base = ["P5_EDU_COMPLETED", ...(skipMajor ? [] : ["P5_MAJOR", "P5_MAJOR_SCOPE"]), "P5_EDU_OPEN"];
+      const skipMajor =
+        eduCompleted === "lessthanhs" ||
+        eduCompleted === "highschool" ||
+        eduCompleted === "certificate" ||
+        eduCompleted === "somecollege";
+
+      const eduBranch = wantsEdu ? ["P5_EDU_COMPLETED", ...(skipMajor ? [] : ["P5_MAJOR", "P5_MAJOR_SCOPE"])] : [];
+      const jobBranch = wantsJob ? ["P5_JOB", "P5_JOB_SCOPE"] : [];
+
+      const base = ["P5_FACTOR_SOURCE", ...eduBranch, ...jobBranch, "P5_EDU_OPEN"];
       const eduOpen = (answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
       const eduInterest = eduOpen === true ? ["P5_EDU_INTEREST_MAJORS"] : [];
       const eduCeil = eduOpen === true ? ["P5_EDU_CEIL"] : [];
@@ -322,7 +351,18 @@ export default function CareerQuizPage() {
     }
 
     return [];
-  }, [personaId, data.questionOrder, answers.P1_EDU_OPEN, answers.P3_EDU_OPEN, answers.P3_QUALIFIED_NOW, answers.P4_EDU_OPEN, answers.P4_EDU_COMPLETED, answers.P5_EDU_OPEN, answers.P5_EDU_COMPLETED]);
+  }, [
+    personaId,
+    data.questionOrder,
+    answers.P1_EDU_OPEN,
+    answers.P3_EDU_OPEN,
+    answers.P3_QUALIFIED_NOW,
+    answers.P4_EDU_OPEN,
+    answers.P4_EDU_COMPLETED,
+    answers.P5_FACTOR_SOURCE,
+    answers.P5_EDU_OPEN,
+    answers.P5_EDU_COMPLETED,
+  ]);
 
   const qId = questionOrder[index] || "";
 
@@ -357,6 +397,20 @@ export default function CareerQuizPage() {
       };
     }
     if (qId === "P4_JOB") return { id: "P4_JOB", kind: "jobSearch", text: "What is your current job title?" };
+    if (qId === "P5_FACTOR_SOURCE") {
+      return {
+        id: "P5_FACTOR_SOURCE",
+        kind: "singleChoice",
+        text: "Do you want to factor in your education and job experience into career suggestions?",
+        options: [
+          { text: "My education only", mapping: { p5FactorSource: "edu" } },
+          { text: "My job experience only", mapping: { p5FactorSource: "job" } },
+          { text: "Both education and job", mapping: { p5FactorSource: "both" } },
+          { text: "Do not factor in my education and job experience", mapping: { p5FactorSource: "none" } },
+        ],
+      };
+    }
+    if (qId === "P5_JOB") return { id: "P5_JOB", kind: "jobSearch", text: "What is your current job title?" };
     if (qId === "P3_MAJOR") {
       return { id: "P3_MAJOR", kind: "majorSearch", text: "What did you study, or what are you currently studying?" };
     }
@@ -555,6 +609,18 @@ export default function CareerQuizPage() {
         ],
       };
     }
+    if (qId === "P5_JOB_SCOPE") {
+      return {
+        id: "P5_JOB_SCOPE",
+        kind: "singleChoice",
+        text: "How should we use your job experience when suggesting career changes?",
+        options: [
+          { text: "Limit careers to my current area", mapping: { p5JobScope: "current" } },
+          { text: "Include careers in adjacent fields", mapping: { p5JobScope: "adjacent" } },
+          { text: "I am open to suggestions from any career field", mapping: { p5JobScope: "any" } },
+        ],
+      };
+    }
     return getQuestion(qId, data) as any;
   }, [qId, data]);
 
@@ -653,7 +719,7 @@ export default function CareerQuizPage() {
 
   return (
     <>
-      <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
+      <div className="quiz-wrapper" style={{ background: "var(--paper)", minHeight: "100vh" }}>
         <main className="quiz-main" style={{ maxWidth: 680, margin: "0 auto", padding: "2rem 2rem 6rem" }}>
 
           {/* Nav */}
@@ -1117,9 +1183,6 @@ export default function CareerQuizPage() {
       />
 
       <style>{`
-        @media (min-width: 900px) {
-          .quiz-main { padding-right: calc(2rem + 260px) !important; }
-        }
         @media (max-width: 600px) {
           .persona-grid { grid-template-columns: 1fr !important; }
         }

@@ -174,12 +174,13 @@ select:focus {
   transform: none !important;
 }
 
-/* Quiz desktop layout: offset main content so it doesn't sit under the 260px fixed sidebar */
+/* Quiz desktop layout: reserve right column for fixed sidebar, widen content */
 @media (min-width: 900px) {
+  .quiz-wrapper {
+    padding-right: 260px;
+  }
   .quiz-main {
-    margin-right: 260px !important;
-    /* re-center within the remaining space */
-    margin-left: auto !important;
+    max-width: 860px !important;
   }
 }
 
