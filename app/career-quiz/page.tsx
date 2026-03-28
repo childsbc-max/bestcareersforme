@@ -250,6 +250,29 @@ function shuffleCopy<T>(arr: T[]): T[] {
   return a;
 }
 
+/** Order job search: exact / best alternative title matches before random file order (and before `.slice` truncates). */
+function jobTitleSearchScore(c: { name?: string; alternativeJobTitles?: unknown }, queryRaw: string): number {
+  const query = queryRaw.trim().toLowerCase();
+  if (!query) return 0;
+  const name = String(c.name || "").toLowerCase().trim();
+  const alts = Array.isArray(c.alternativeJobTitles)
+    ? (c.alternativeJobTitles as unknown[]).map((t) => String(t || "").toLowerCase().trim()).filter(Boolean)
+    : [];
+  const exactAlt = alts.some((t) => t === query);
+  const altStarts = alts.some((t) => t.startsWith(query));
+  const altHas = alts.some((t) => t.includes(query));
+  if (name === query) return 1_000_000;
+  if (exactAlt) return 900_000;
+  if (name.startsWith(query)) return 800_000;
+  if (altStarts) return 750_000;
+  if (name.includes(query)) return 600_000;
+  if (altHas) {
+    const shortest = alts.filter((t) => t.includes(query)).sort((a, b) => a.length - b.length)[0] ?? "";
+    return 400_000 - Math.min(80_000, Math.max(0, shortest.length - query.length) * 200);
+  }
+  return 0;
+}
+
 export default function CareerQuizPage() {
   const router = useRouter();
   const data = quizData as QuizData;
@@ -867,10 +890,10 @@ export default function CareerQuizPage() {
                 }}>
                   {(() => {
                     const query = jobQuery.trim().toLowerCase();
-                    const jobKey = qId as "P4_JOB";
                     if (query.length < 2) {
                       return <div style={{ padding: "0.75rem 1rem", fontSize: "0.85rem", color: "var(--muted)" }}>Type at least 2 characters to search.</div>;
                     }
+                    const JOB_SEARCH_LIMIT = 100;
                     return ((careers as any[]) || [])
                       .filter((c) => {
                         const name = String(c.name || "").toLowerCase();
@@ -878,15 +901,18 @@ export default function CareerQuizPage() {
                         const alts = Array.isArray(c.alternativeJobTitles) ? c.alternativeJobTitles : [];
                         return alts.some((t: any) => String(t || "").toLowerCase().includes(query));
                       })
-                      .slice(0, 50)
-                      .map((c) => (
+                      .map((c) => ({ c, score: jobTitleSearchScore(c, query) }))
+                      .filter(({ score }) => score > 0)
+                      .sort((a, b) => b.score - a.score || String(a.c.name).localeCompare(String(b.c.name)))
+                      .slice(0, JOB_SEARCH_LIMIT)
+                      .map(({ c }) => (
                         <button
                           key={c.soc}
                           type="button"
                           onClick={() => {
                             persist({
                               ...answers,
-                              [jobKey]: {
+                              [qId]: {
                                 text: String(c.name),
                                 mapping: { soc: String(c.soc), socMajorGroup: getSocMajorGroup(String(c.soc)) },
                               },
