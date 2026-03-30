@@ -7,6 +7,8 @@ import { GraduationCap, BookOpen, Briefcase, Compass, Bot, DollarSign, MapPin, A
 import careers from "@/data/careers.json";
 import stateDemand from "@/data/stateDemand.json";
 import quizData from "@/data/quiz-data.json";
+import { parseHollandCodeString } from "@/lib/holland-binary";
+import { INTEREST_QUESTION_IDS } from "@/lib/holland-pairs";
 import { scoreAndRankCareersWithDebug, educationRankFromRequirement, experienceRankFromRequirement } from "@/lib/scoring";
 import type { Answers, CareerData, QuizData } from "@/lib/types";
 import { AnswersSidebar } from "@/app/components/AnswersSidebar";
@@ -14,10 +16,10 @@ import { AnswersSidebar } from "@/app/components/AnswersSidebar";
 const QUIZ_STORAGE_KEY = "bestcareerfor.me:quiz_answers:v1";
 
 const PERSONA_META: Record<string, { icon: any; title: string }> = {
-  P1: { icon: GraduationCap, title: "Still in school" },
-  P3: { icon: BookOpen,      title: "In college / recent grad" },
-  P4: { icon: Briefcase,     title: "Working, looking to advance" },
-  P5: { icon: Compass,       title: "Exploring a career change" },
+  P1: { icon: GraduationCap, title: "I'm still in school" },
+  P3: { icon: BookOpen,      title: "I just graduated or am about to graduate" },
+  P4: { icon: Briefcase,     title: "I want to move up" },
+  P5: { icon: Compass,       title: "I want to change careers" },
 };
 
 export default function ResultsPage() {
@@ -126,9 +128,13 @@ export default function ResultsPage() {
   const willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
   const personaId = ((answers as any)?.personaId as any)?.value as string | undefined;
 
-  // Compute Holland code from H1-H7 answers
+  // Prefer stored binary-quiz code; else legacy H1–H7 vote counts
   const hollandCode = useMemo(() => {
     if (!answers) return "";
+    const stored = (answers as any).hollandCode as string | undefined;
+    if (typeof stored === "string" && parseHollandCodeString(stored).length === 3) {
+      return stored.trim().toUpperCase();
+    }
     const qd = quizData as QuizData;
     const counts: Record<string, number> = {};
     for (let i = 1; i <= 7; i++) {
@@ -157,8 +163,14 @@ export default function ResultsPage() {
       const wl = workText.toLowerCase();
       parts.push(wl.includes("indoor") || wl.includes("office") ? "Indoors" : wl.includes("outdoor") ? "Outdoors" : "Mixed setting");
     }
-    const salary = (answers.Q5 as any)?.mapping?.salaryFloor as number | undefined;
-    if (salary) parts.push(`$${Math.round(salary / 1000)}k+ salary`);
+    const salaryMin = (answers.Q5 as any)?.mapping?.salaryMin as number | undefined;
+    const salaryMax = (answers.Q5 as any)?.mapping?.salaryMax as number | undefined;
+    if (salaryMin != null) {
+      const salaryLabel = salaryMax != null
+        ? `$${Math.round(salaryMin / 1000)}k\u2013$${Math.round(salaryMax / 1000)}k salary`
+        : `$${Math.round(salaryMin / 1000)}k+ salary`;
+      parts.push(salaryLabel);
+    }
     const jobMarketText = (answers.Q8 as any)?.text as string | undefined;
     if (jobMarketText) {
       const jl = jobMarketText.toLowerCase();
@@ -177,11 +189,12 @@ export default function ResultsPage() {
     if ((answers.personaId as any)?.value) ids.push("PERSONA");
     const qd = quizData as QuizData;
     const allKnownIds = [
-      "P4_JOB", "P4_EDU_COMPLETED", "P4_MAJOR", "P4_EDU_OPEN", "P4_EDU_INTEREST_MAJORS", "P4_EDU_CEIL",
-      "P1_EDU_OPEN", "P1_EDU_INTEREST_MAJORS", "P1_EDU_CEIL",
-      "P3_MAJOR", "P3_MAJOR_SCOPE", "P3_EDU_OPEN", "P3_EDU_INTEREST_MAJORS", "P3_EDU_CEIL", "P3_QUALIFIED_NOW", "P3_EXPERIENCE",
-      "P5_EDU_COMPLETED", "P5_MAJOR", "P5_MAJOR_SCOPE", "P5_EDU_OPEN", "P5_EDU_INTEREST_MAJORS", "P5_EDU_CEIL",
+      "P4_JOB", "P4_EDU_LEVEL", "P4_EDU_COMPLETED", "P4_MAJOR", "P4_EDU_OPEN", "P4_EDU_INTEREST_MAJORS", "P4_EDU_CEIL",
+      "P1_EDU_LEVEL", "P1_EDU_OPEN", "P1_EDU_INTEREST_MAJORS", "P1_EDU_CEIL",
+      "P3_MAJOR", "P3_MAJOR_SCOPE", "P3_EDU_LEVEL", "P3_EDU_OPEN", "P3_EDU_INTEREST_MAJORS", "P3_EDU_CEIL", "P3_QUALIFIED_NOW", "P3_EXPERIENCE",
+      "P5_EDU_LEVEL", "P5_EDU_COMPLETED", "P5_MAJOR", "P5_MAJOR_SCOPE", "P5_EDU_OPEN", "P5_EDU_INTEREST_MAJORS", "P5_EDU_CEIL",
       ...Array.from({ length: 7 }, (_, i) => `H${i + 1}`),
+      ...INTEREST_QUESTION_IDS,
       ...qd.p1Questions.map((q) => q.id),
     ];
     for (const id of allKnownIds) {
@@ -262,13 +275,20 @@ export default function ResultsPage() {
             <a href="/" style={{ textDecoration: "none" }}>
               <span className="logo">best<span className="logo-accent">career</span>for.me</span>
             </a>
-            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
               <button type="button" onClick={copyResultsLink} className="btn-secondary" style={{ fontSize: "0.82rem", padding: "0.5rem 1rem" }}>
                 {copied
                   ? <><Check size={13} aria-hidden="true" /> Copied!</>
                   : <><Copy size={13} aria-hidden="true" /> Copy results link</>
                 }
               </button>
+              <a
+                href="/results/qa"
+                className="btn-secondary"
+                style={{ fontSize: "0.82rem", padding: "0.5rem 1rem", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                QA from feedback
+              </a>
               <button type="button" onClick={startOver} className="btn-secondary" style={{ fontSize: "0.82rem", padding: "0.5rem 1rem" }}>
                 <RotateCcw size={13} aria-hidden="true" /> Start over
               </button>
@@ -374,6 +394,13 @@ export default function ResultsPage() {
                 <pre style={{ fontSize: "0.7rem", overflow: "auto", whiteSpace: "pre-wrap", background: "var(--paper)", padding: "0.75rem", borderRadius: 8, border: "1px solid var(--border)" }}>
                   {JSON.stringify({
                     personaId: (answers.personaId as any)?.value,
+                    hollandCode: (answers as any)?.hollandCode ?? null,
+                    interestPairChoices: Object.fromEntries(
+                      INTEREST_QUESTION_IDS.map((id) => {
+                        const ans = answers[id] as any;
+                        return [id, ans?.mapping?.choice ?? null];
+                      })
+                    ),
                     hollandAnswers: Object.fromEntries(
                       Array.from({ length: 7 }, (_, i) => {
                         const hId = `H${i + 1}`;
@@ -619,7 +646,7 @@ export default function ResultsPage() {
                 type="button"
                 onClick={() =>
                   applyAnswerPatch({
-                    Q5: { text: "Enough to cover my basics and have some freedom (avg $40k–$60k)", mapping: { salaryFloor: 40000 } } as any,
+                    Q5: { text: "$50,000\u2013$80,000", mapping: { salaryMin: 50000, salaryMax: 80000 } } as any,
                   })
                 }
                 style={{
@@ -628,8 +655,8 @@ export default function ResultsPage() {
                 }}
                 className="want-more-btn"
               >
-                <div style={{ fontWeight: 500, fontSize: "0.88rem", color: "var(--ink)" }}>Lower salary floor</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.15rem" }}>Set to $40k–$60k range.</div>
+                <div style={{ fontWeight: 500, fontSize: "0.88rem", color: "var(--ink)" }}>Lower salary range</div>
+                <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.15rem" }}>Set to $50k\u2013$80k range.</div>
               </button>
 
               {(personaId === "P4" || personaId === "P5") && (
@@ -639,11 +666,9 @@ export default function ResultsPage() {
                     applyAnswerPatch(
                       personaId === "P4"
                         ? ({
-                            P4_EDU_OPEN: { text: "Yes", mapping: { openToMoreEducation: true } } as any,
                             P4_EDU_CEIL: { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } } as any,
                           } as Partial<Answers>)
                         : ({
-                            P5_EDU_OPEN: { text: "Yes", mapping: { openToMoreEducation: true } } as any,
                             P5_EDU_CEIL: { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } } as any,
                           } as Partial<Answers>)
                     )

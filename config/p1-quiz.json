@@ -255,35 +255,31 @@
     {
       "id": "Q3",
       "label": "People Interaction",
-      "text": "How much do you want working with people to be part of your day-to-day job? Pick the one that fits best.",
+      "text": "How much do you want working with people to be part of your day-to-day job?",
       "filterType": "SOFT FILTER",
       "answers": [
         {
-          "text": "I want people to be the center of my work \u2014 I'm energized by constant interaction",
-          "mapping": {
-            "peopleContactMin": 4.5,
-            "peopleContactMax": 5.0
-          }
-        },
-        {
-          "text": "I like regular contact with people but also need time to focus independently",
-          "mapping": {
-            "peopleContactMin": 3.5,
-            "peopleContactMax": 4.9
-          }
-        },
-        {
-          "text": "I prefer mostly independent work with occasional collaboration",
-          "mapping": {
-            "peopleContactMin": 2.5,
-            "peopleContactMax": 3.9
-          }
-        },
-        {
-          "text": "I want to work mostly alone \u2014 minimal meetings or client interaction",
+          "text": "Mostly on my own \u2014 I work better with data, systems, or tasks than with people",
           "mapping": {
             "peopleContactMin": 0,
-            "peopleContactMax": 3.5
+            "peopleContactMax": 3.0,
+            "peopleContactPreference": "low"
+          }
+        },
+        {
+          "text": "Mixed \u2014 I like some people contact but also need independent focus time",
+          "mapping": {
+            "peopleContactMin": 3.0,
+            "peopleContactMax": 4.5,
+            "peopleContactPreference": "medium"
+          }
+        },
+        {
+          "text": "Mostly with people \u2014 clients, patients, students, or teams energize me",
+          "mapping": {
+            "peopleContactMin": 4.5,
+            "peopleContactMax": 5.0,
+            "peopleContactPreference": "high"
           }
         }
       ]
@@ -291,7 +287,7 @@
     {
       "id": "Q4",
       "label": "Physical Activity Level",
-      "text": "How physically active do you want your work to be?",
+      "text": "How physically active do you want your work to be? Check all that apply.",
       "filterType": "SOFT FILTER",
       "answers": [
         {
@@ -321,33 +317,30 @@
       "filterType": "HARD FILTER",
       "answers": [
         {
-          "text": "Just enough to cover my basics",
+          "text": "Under $50,000",
           "mapping": {
-            "salaryFloor": 24480
+            "salaryMin": 0,
+            "salaryMax": 50000
           }
         },
         {
-          "text": "Enough to cover my basics and have some freedom",
+          "text": "$50,000\u2013$80,000",
           "mapping": {
-            "salaryFloor": 40000
+            "salaryMin": 50000,
+            "salaryMax": 80000
           }
         },
         {
-          "text": "A comfortable life without financial stress",
+          "text": "$80,000\u2013$120,000",
           "mapping": {
-            "salaryFloor": 60000
+            "salaryMin": 80000,
+            "salaryMax": 120000
           }
         },
         {
-          "text": "Enough to support a family without worry",
+          "text": "$120,000 or more",
           "mapping": {
-            "salaryFloor": 80000
-          }
-        },
-        {
-          "text": "I want to be able to build wealth over time",
-          "mapping": {
-            "salaryFloor": 100000
+            "salaryMin": 120000
           }
         }
       ]
@@ -589,23 +582,23 @@
     {
       "id": "Q8",
       "label": "Job Market Stability",
-      "text": "How important is it that you work in a field where hiring is flat or growing in your area?",
+      "text": "How important is it to you that your career has strong job availability?",
       "filterType": "WEIGHT",
       "answers": [
         {
-          "text": "Very important \u2014 I want strong local job availability",
+          "text": "Very important \u2014 I need reliable job openings in my area",
           "mapping": {
             "jobMarketWeight": "high"
           }
         },
         {
-          "text": "Somewhat important \u2014 I would like reasonable options nearby",
+          "text": "Somewhat important \u2014 I'd prefer good availability but it's not a dealbreaker",
           "mapping": {
             "jobMarketWeight": "medium"
           }
         },
         {
-          "text": "Not important \u2014 I am willing to follow the opportunity",
+          "text": "Not very important \u2014 local job availability isn't a deciding factor for me",
           "mapping": {
             "jobMarketWeight": "low"
           }

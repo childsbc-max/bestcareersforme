@@ -14,7 +14,8 @@ export type HollandQuestion = {
 };
 
 export type P1AnswerMapping = Record<string, unknown> & {
-  salaryFloor?: number;
+  salaryMin?: number;
+  salaryMax?: number;
   willingToRelocate?: boolean;
   jobMarketWeight?: "high" | "medium" | "low";
   aiToleranceScale?: number;
@@ -56,6 +57,7 @@ export type Career = {
   hollandCode: string;
   suggestedMajors?: string;
   careerArea?: string;
+  careerAreas?: string[];
   currentDemand?: string;
   educationRequirements?: string;
   jobDescription?: string;
