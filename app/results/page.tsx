@@ -426,7 +426,11 @@ export default function ResultsPage() {
                       })
                     ),
                     P4_JOB: answers.P4_JOB
-                      ? { title: (answers.P4_JOB as any)?.text, soc: (answers.P4_JOB as any)?.mapping?.soc }
+                      ? {
+                          titles: (answers.P4_JOB as any)?.text,
+                          jobs: (answers.P4_JOB as any)?.mapping?.jobs,
+                          soc: (answers.P4_JOB as any)?.mapping?.soc,
+                        }
                       : undefined,
                     P3_MAJOR: (answers.P3_MAJOR as any)?.mapping?.primaryMajors,
                     P4_MAJOR: (answers.P4_MAJOR as any)?.mapping?.primaryMajors,

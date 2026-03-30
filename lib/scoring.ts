@@ -132,14 +132,43 @@ export function effectiveMajorsForPersona(answers: Answers, personaId: string | 
   return [];
 }
 
-function resolveCurrentJobSoc(answers: Answers): string | undefined {
-  // Supports any persona that captures a *_JOB answer with mapping.soc.
+/** Distinct SOC codes from any *_JOB answer (legacy single `mapping.soc` or `mapping.jobs[]`). */
+function normalizeJobSocList(answers: Answers): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
   for (const [key, val] of Object.entries(answers || {})) {
     if (!key.endsWith("_JOB")) continue;
-    const soc = (val as any)?.mapping?.soc as string | undefined;
-    if (soc) return soc;
+    const mapping = (val as any)?.mapping as Record<string, unknown> | undefined;
+    if (!mapping) continue;
+    const jobs = mapping.jobs;
+    if (Array.isArray(jobs)) {
+      for (const j of jobs) {
+        const soc = j != null && typeof (j as any).soc === "string" ? String((j as any).soc).trim() : "";
+        if (soc) {
+          const n = normalizeSoc(soc);
+          if (!seen.has(n)) {
+            seen.add(n);
+            out.push(soc);
+          }
+        }
+      }
+      continue;
+    }
+    const soc = typeof mapping.soc === "string" ? String(mapping.soc).trim() : "";
+    if (soc) {
+      const n = normalizeSoc(soc);
+      if (!seen.has(n)) {
+        seen.add(n);
+        out.push(soc);
+      }
+    }
   }
-  return undefined;
+  return out;
+}
+
+function resolveCurrentJobSoc(answers: Answers): string | undefined {
+  const list = normalizeJobSocList(answers);
+  return list[0];
 }
 
 function applyCurrentJobScope(
@@ -239,12 +268,22 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
     }
   }
 
-  // Any persona with a current job SOC gets related-job scoping.
-  const currentSoc = resolveCurrentJobSoc(answers);
+  // Any persona with job SOC(s) gets related-job scoping (union if multiple jobs).
+  const jobSocs = normalizeJobSocList(answers);
   // P5 has no current-job question; skip job scoping so stale P5_JOB in storage does not affect results.
-  if (currentSoc && personaId !== "P5") {
+  if (jobSocs.length > 0 && personaId !== "P5") {
     const interestedMajors = personaId === "P4" ? readPrimaryMajorsForQuestion(answers, "P4_EDU_INTEREST_MAJORS") : [];
-    result = applyCurrentJobScope(result, careerData.careers || [], currentSoc, interestedMajors, "adjacent");
+    const allCareers = careerData.careers || [];
+    if (jobSocs.length === 1) {
+      result = applyCurrentJobScope(result, allCareers, jobSocs[0], interestedMajors, "adjacent");
+    } else {
+      const bySoc = new Map<string, Career>();
+      for (const soc of jobSocs) {
+        const scoped = applyCurrentJobScope(result, allCareers, soc, interestedMajors, "adjacent");
+        for (const c of scoped) bySoc.set(normalizeSoc(c.soc), c);
+      }
+      result = Array.from(bySoc.values());
+    }
   }
 
   // P4 major gate remains persona-specific.

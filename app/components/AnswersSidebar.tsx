@@ -23,7 +23,7 @@ const QUESTION_LABELS: Record<string, string> = {
   P3_EDU_CEIL: "Education ceiling",
   P3_QUALIFIED_NOW: "Qualified now?",
   P3_EXPERIENCE: "Experience level",
-  P4_JOB: "Current job",
+  P4_JOB: "Jobs you've held",
   P4_EDU_LEVEL: "Education level",
   P4_MAJOR: "Your major",
   P4_EDU_INTEREST_MAJORS: "Interest areas",

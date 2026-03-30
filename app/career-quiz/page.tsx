@@ -250,6 +250,54 @@ function getSocMajorGroup(soc: string): string {
   return String(soc || "").trim().slice(0, 2);
 }
 
+const MAX_JOBS_HELD = 3;
+
+type JobHeldPick = { title: string; soc: string; socMajorGroup: string };
+
+function readSelectedJobsFromAnswer(ans: { text?: string; mapping?: Record<string, unknown> } | undefined): JobHeldPick[] {
+  const m = ans?.mapping;
+  if (!m) return [];
+  const jobs = m.jobs;
+  if (Array.isArray(jobs) && jobs.length > 0) {
+    return jobs
+      .map((j: unknown) => {
+        const row = j as { title?: string; soc?: string; socMajorGroup?: string };
+        const soc = row?.soc != null ? String(row.soc).trim() : "";
+        const title = row?.title != null ? String(row.title).trim() : "";
+        return {
+          title: title || soc,
+          soc,
+          socMajorGroup: row?.socMajorGroup != null ? String(row.socMajorGroup) : getSocMajorGroup(soc),
+        };
+      })
+      .filter((j) => j.soc);
+  }
+  const soc = typeof m.soc === "string" ? String(m.soc).trim() : "";
+  const text = typeof ans.text === "string" ? ans.text.trim() : "";
+  if (soc && text) {
+    return [
+      {
+        title: text,
+        soc,
+        socMajorGroup: typeof m.socMajorGroup === "string" ? m.socMajorGroup : getSocMajorGroup(soc),
+      },
+    ];
+  }
+  return [];
+}
+
+function buildJobsAnswerPayload(jobs: JobHeldPick[]): { text: string; mapping: Record<string, unknown> } {
+  const first = jobs[0];
+  return {
+    text: jobs.map((j) => j.title).join(", "),
+    mapping: {
+      jobs,
+      soc: first.soc,
+      socMajorGroup: first.socMajorGroup,
+    },
+  };
+}
+
 function getQuestion(qId: string, data: QuizData): P1Question | (QuizData["hollandQuestions"][number] & { inputType?: never }) | null {
   if (qId.startsWith("H")) return data.hollandQuestions.find((q) => q.id === qId) ?? null;
   return data.p1Questions.find((q) => q.id === qId) ?? null;
@@ -458,6 +506,10 @@ export default function CareerQuizPage() {
 
   const qId = questionOrder[index] || "";
 
+  useEffect(() => {
+    if (qId === "P4_JOB") setJobQuery("");
+  }, [qId]);
+
   const q: ClientQuestion | null = useMemo(() => {
     const interestIdx = interestIndexFromQuestionId(qId);
     if (interestIdx !== null) {
@@ -499,7 +551,7 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P4_JOB") return { id: "P4_JOB", kind: "jobSearch", text: "What is your current job title?" };
+    if (qId === "P4_JOB") return { id: "P4_JOB", kind: "jobSearch", text: "What jobs have you held?" };
     if (qId === "P3_MAJOR") {
       return { id: "P3_MAJOR", kind: "majorSearch", text: "What did you study, or what are you currently studying?" };
     }
@@ -717,7 +769,12 @@ export default function CareerQuizPage() {
       const ch = (answers[qId] as any)?.mapping?.choice;
       return ch === "A" || ch === "B";
     }
-    if ((q as any).kind === "jobSearch") return Boolean((answers[qId] as any)?.mapping?.soc);
+    if ((q as any).kind === "jobSearch") {
+      const row = answers[qId] as { mapping?: { jobs?: unknown; soc?: string } } | undefined;
+      const jobs = row?.mapping?.jobs;
+      if (Array.isArray(jobs) && jobs.length > 0) return true;
+      return Boolean(row?.mapping?.soc);
+    }
     if ((q as any).kind === "majorSearch") {
       if (isEduInterestMajorsQuestionId(qId)) return true;
       const row = answers[qId] as any;
@@ -985,14 +1042,67 @@ export default function CareerQuizPage() {
               })()
 
             ) : (q as any).kind === "jobSearch" ? (
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <p style={{ fontSize: "0.85rem", color: "var(--muted)", lineHeight: 1.5 }}>
+                  Search and add up to three jobs from your work history. We use them together to suggest adjacent career paths.
+                </p>
                 <input
                   type="text"
-                  value={jobQuery || (answers[qId] as any)?.text || ""}
+                  value={jobQuery}
                   onChange={(e) => setJobQuery(e.target.value)}
-                  placeholder="Start typing a job title…"
-                  style={{ marginBottom: "0.75rem" }}
+                  placeholder="Search and add each job…"
+                  style={{ marginBottom: 0 }}
                 />
+                {(() => {
+                  const cur = readSelectedJobsFromAnswer(answers[qId] as { text?: string; mapping?: Record<string, unknown> });
+                  return cur.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                      {cur.map((j) => (
+                        <span
+                          key={j.soc}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            borderRadius: 100,
+                            border: "1px solid var(--border)",
+                            background: "var(--cream)",
+                            padding: "0.25rem 0.75rem",
+                            fontSize: "0.82rem",
+                            color: "var(--ink)",
+                          }}
+                        >
+                          {j.title}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${j.title}`}
+                            onClick={() => {
+                              const next = cur.filter((x) => x.soc !== j.soc);
+                              if (next.length === 0) {
+                                const nextAnswers = { ...answers };
+                                delete (nextAnswers as any)[qId];
+                                persist(nextAnswers as Answers);
+                              } else {
+                                persist({ ...answers, [qId]: buildJobsAnswerPayload(next) });
+                              }
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "var(--muted)",
+                              fontSize: "1rem",
+                              lineHeight: 1,
+                              padding: "0 0.1rem",
+                            }}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
                 <div style={{
                   maxHeight: 256,
                   overflowY: "auto",
@@ -1005,6 +1115,8 @@ export default function CareerQuizPage() {
                     if (query.length < 2) {
                       return <div style={{ padding: "0.75rem 1rem", fontSize: "0.85rem", color: "var(--muted)" }}>Type at least 2 characters to search.</div>;
                     }
+                    const cur = readSelectedJobsFromAnswer(answers[qId] as { text?: string; mapping?: Record<string, unknown> });
+                    const atMax = cur.length >= MAX_JOBS_HELD;
                     const JOB_SEARCH_LIMIT = 100;
                     return ((careers as any[]) || [])
                       .filter((c) => {
@@ -1017,50 +1129,51 @@ export default function CareerQuizPage() {
                       .filter(({ score }) => score > 0)
                       .sort((a, b) => b.score - a.score || String(a.c.name).localeCompare(String(b.c.name)))
                       .slice(0, JOB_SEARCH_LIMIT)
-                      .map(({ c }) => (
-                        <button
-                          key={c.soc}
-                          type="button"
-                          onClick={() => {
-                            persist({
-                              ...answers,
-                              [qId]: {
-                                text: String(c.name),
-                                mapping: { soc: String(c.soc), socMajorGroup: getSocMajorGroup(String(c.soc)) },
-                              },
-                            });
-                            setJobQuery(String(c.name));
-                          }}
-                          className="search-result-btn"
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "0.75rem 1rem",
-                            background: "transparent",
-                            border: "none",
-                            borderBottom: "1px solid var(--border)",
-                            cursor: "pointer",
-                            fontSize: "0.88rem",
-                            color: "var(--ink)",
-                          }}
-                        >
-                          <div style={{ fontWeight: 500 }}>{c.name}</div>
-                          {Array.isArray(c.alternativeJobTitles) && c.alternativeJobTitles.length ? (
-                            <div style={{ marginTop: "0.15rem", fontSize: "0.78rem", color: "var(--muted)" }}>
-                              Also: {c.alternativeJobTitles.slice(0, 3).join(", ")}
-                              {c.alternativeJobTitles.length > 3 ? "…" : ""}
-                            </div>
-                          ) : null}
-                        </button>
-                      ));
+                      .map(({ c }) => {
+                        const alreadyAdded = cur.some((x) => x.soc === String(c.soc));
+                        const disabled = atMax || alreadyAdded;
+                        return (
+                          <button
+                            key={c.soc}
+                            type="button"
+                            onClick={() => {
+                              if (disabled) return;
+                              const pick: JobHeldPick = {
+                                title: String(c.name),
+                                soc: String(c.soc),
+                                socMajorGroup: getSocMajorGroup(String(c.soc)),
+                              };
+                              persist({ ...answers, [qId]: buildJobsAnswerPayload([...cur, pick]) });
+                              setJobQuery("");
+                            }}
+                            className="search-result-btn"
+                            disabled={disabled}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "0.75rem 1rem",
+                              background: "transparent",
+                              border: "none",
+                              borderBottom: "1px solid var(--border)",
+                              cursor: disabled ? "not-allowed" : "pointer",
+                              opacity: disabled ? 0.45 : 1,
+                              fontSize: "0.88rem",
+                              color: "var(--ink)",
+                            }}
+                          >
+                            <div style={{ fontWeight: 500 }}>{c.name}</div>
+                            {Array.isArray(c.alternativeJobTitles) && c.alternativeJobTitles.length ? (
+                              <div style={{ marginTop: "0.15rem", fontSize: "0.78rem", color: "var(--muted)" }}>
+                                Also: {c.alternativeJobTitles.slice(0, 3).join(", ")}
+                                {c.alternativeJobTitles.length > 3 ? "…" : ""}
+                              </div>
+                            ) : null}
+                          </button>
+                        );
+                      });
                   })()}
                 </div>
-                {(answers[qId] as any)?.mapping?.soc ? (
-                  <p style={{ marginTop: "0.5rem", fontSize: "0.85rem", color: "var(--muted)" }}>
-                    Selected: <span style={{ fontWeight: 500, color: "var(--ink)" }}>{(answers[qId] as any)?.text}</span>
-                  </p>
-                ) : null}
               </div>
 
             ) : (q as any).kind === "majorSearch" ? (
