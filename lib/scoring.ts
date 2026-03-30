@@ -109,7 +109,7 @@ function majorsMatchCareerSuggestedMajors(userMajors: string[], careerSuggestedM
   });
 }
 
-function effectiveMajorsForPersona(answers: Answers, personaId: string | undefined): string[] {
+export function effectiveMajorsForPersona(answers: Answers, personaId: string | undefined): string[] {
   if (!personaId) return [];
   if (personaId === "P1") {
     return readPrimaryMajorsForQuestion(answers, "P1_EDU_INTEREST_MAJORS");

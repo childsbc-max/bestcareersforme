@@ -10,7 +10,7 @@ import stateDemand from "@/data/stateDemand.json";
 import quizData from "@/data/quiz-data.json";
 import { parseHollandCodeString } from "@/lib/holland-binary";
 import { INTEREST_QUESTION_IDS } from "@/lib/holland-pairs";
-import { scoreAndRankCareersWithDebug, educationRankFromRequirement, experienceRankFromRequirement } from "@/lib/scoring";
+import { scoreAndRankCareersWithDebug, educationRankFromRequirement, experienceRankFromRequirement, effectiveMajorsForPersona, countSuggestedMajorMatches } from "@/lib/scoring";
 import type { Answers, CareerData, QuizData } from "@/lib/types";
 import { AnswersSidebar } from "@/app/components/AnswersSidebar";
 
@@ -128,6 +128,11 @@ export default function ResultsPage() {
 
   const _willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
   const personaId = ((answers as any)?.personaId as any)?.value as string | undefined;
+
+  const userMajors = useMemo(
+    () => (answers ? effectiveMajorsForPersona(answers, personaId) : []),
+    [answers, personaId]
+  );
 
   // Prefer stored binary-quiz code; else legacy H1–H7 vote counts
   const hollandCode = useMemo(() => {
@@ -453,6 +458,10 @@ export default function ResultsPage() {
                 const desc = c.jobDescription || "";
                 const shortDesc = desc.length > 200 ? desc.slice(0, 200) + "…" : desc;
 
+                // Education match pill
+                const majorMatchCount = userMajors.length > 0 ? countSuggestedMajorMatches(c.suggestedMajors, userMajors) : 0;
+                const majorMatchLabel = majorMatchCount >= 2 ? "Field match" : majorMatchCount === 1 ? "Related field" : null;
+
                 // Work setting pills
                 const workPills: { label: string; icon: any }[] = [];
                 if (c.workSetting) {
@@ -570,6 +579,16 @@ export default function ResultsPage() {
                             <Icon size={11} aria-hidden="true" /> {label}
                           </span>
                         ))}
+                        {majorMatchLabel && (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                            fontSize: "0.72rem", color: "var(--muted)",
+                            border: "1px solid var(--border)", borderRadius: 100,
+                            padding: "0.22rem 0.6rem",
+                          }}>
+                            <GraduationCap size={11} aria-hidden="true" /> {majorMatchLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
 
