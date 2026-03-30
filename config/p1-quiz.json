@@ -229,7 +229,7 @@
     {
       "id": "Q2",
       "label": "Work Setting",
-      "text": "Where would you prefer to work?",
+      "text": "Where would you prefer to work? Click All That Apply",
       "filterType": "SOFT FILTER",
       "answers": [
         {
