@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GraduationCap, BookOpen, Briefcase, Compass } from "lucide-react";
 
@@ -9,6 +10,8 @@ import majorsData from "@/data/majors.json";
 import quizData from "@/data/quiz-data.json";
 import type { Answers, P1Question, QuizData } from "@/lib/types";
 import { readPrimaryMajorsForQuestion, type MultiMajorQuestionId } from "@/lib/scoring";
+import { hollandPairs, HOLLAND_PAIR_COUNT, INTEREST_QUESTION_IDS, interestIndexFromQuestionId, type HollandPair } from "@/lib/holland-pairs";
+import { computeHollandCodeFromChoices } from "@/lib/holland-binary";
 import { AnswersSidebar } from "@/app/components/AnswersSidebar";
 
 const QUIZ_STORAGE_KEY = "bestcareerfor.me:quiz_answers:v1";
@@ -37,10 +40,10 @@ const PERSONA_META: Record<string, { icon: any; description: string }> = {
 };
 
 const PERSONA_TITLES: Record<string, string> = {
-  P1: "Still in school",
-  P3: "In college / recent grad",
-  P4: "Working, looking to advance",
-  P5: "Exploring a career change",
+  P1: "I'm still in school",
+  P3: "I just graduated or am about to graduate",
+  P4: "I want to move up",
+  P5: "I want to change careers",
 };
 
 function isMultiMajorQuestionId(qId: string): qId is MultiMajorQuestionId {
@@ -90,15 +93,11 @@ type ClientQuestion =
       text: string;
     }
   | {
-      id: "P5_FACTOR_SOURCE";
-      kind: "singleChoice";
+      id: string;
+      kind: "hollandBinary";
       text: string;
-      options: Array<{ text: string; mapping: Record<string, unknown> }>;
-    }
-  | {
-      id: "P5_JOB";
-      kind: "jobSearch";
-      text: string;
+      pair: HollandPair;
+      pairIndex: number;
     }
   | {
       id: "P3_MAJOR";
@@ -112,7 +111,7 @@ type ClientQuestion =
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P3_EDU_OPEN";
+      id: "P3_EDU_LEVEL";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
@@ -141,7 +140,7 @@ type ClientQuestion =
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P1_EDU_OPEN";
+      id: "P1_EDU_LEVEL";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
@@ -158,7 +157,7 @@ type ClientQuestion =
       text: string;
     }
   | {
-      id: "P4_EDU_COMPLETED";
+      id: "P4_EDU_LEVEL";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
@@ -167,12 +166,6 @@ type ClientQuestion =
       id: "P4_MAJOR";
       kind: "majorSearch";
       text: string;
-    }
-  | {
-      id: "P4_EDU_OPEN";
-      kind: "singleChoice";
-      text: string;
-      options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
       id: "P4_EDU_INTEREST_MAJORS";
@@ -186,7 +179,7 @@ type ClientQuestion =
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P5_EDU_COMPLETED";
+      id: "P5_EDU_LEVEL";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
@@ -203,24 +196,12 @@ type ClientQuestion =
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
     }
   | {
-      id: "P5_EDU_OPEN";
-      kind: "singleChoice";
-      text: string;
-      options: Array<{ text: string; mapping: Record<string, unknown> }>;
-    }
-  | {
       id: "P5_EDU_INTEREST_MAJORS";
       kind: "majorSearch";
       text: string;
     }
   | {
       id: "P5_EDU_CEIL";
-      kind: "singleChoice";
-      text: string;
-      options: Array<{ text: string; mapping: Record<string, unknown> }>;
-    }
-  | {
-      id: "P5_JOB_SCOPE";
       kind: "singleChoice";
       text: string;
       options: Array<{ text: string; mapping: Record<string, unknown> }>;
@@ -239,6 +220,33 @@ function getQuestion(qId: string, data: QuizData): P1Question | (QuizData["holla
 
 function stripHollandTag(s: string): string {
   return s.replace(/\s*\[[RIASEC]\]\s*$/, "");
+}
+
+/** Same ladder as legacy P4/P5 completed question; mapping uses `educationLevel` for scoring. */
+const EDU_LEVEL_OPTIONS_STANDARD: Array<{ text: string; mapping: { educationLevel: string } }> = [
+  { text: "Less than high school", mapping: { educationLevel: "lessthanhs" } },
+  { text: "High school diploma or equivalent", mapping: { educationLevel: "highschool" } },
+  { text: "Post-secondary certificate", mapping: { educationLevel: "certificate" } },
+  { text: "Some college", mapping: { educationLevel: "somecollege" } },
+  { text: "Associate degree", mapping: { educationLevel: "associate" } },
+  { text: "Bachelor's degree", mapping: { educationLevel: "bachelor" } },
+  { text: "Master's degree", mapping: { educationLevel: "master" } },
+  { text: "Doctoral / professional degree", mapping: { educationLevel: "doctoral" } },
+];
+
+/** P1: adds in-progress HS; maps to existing keys (no new scoring enums). */
+const EDU_LEVEL_OPTIONS_P1: Array<{ text: string; mapping: { educationLevel: string } }> = [
+  { text: "Still in high school (in progress)", mapping: { educationLevel: "highschool" } },
+  ...EDU_LEVEL_OPTIONS_STANDARD,
+];
+
+function readEducationLevelKey(answers: Answers, qId: string): string | undefined {
+  const row = answers[qId as keyof Answers] as { mapping?: { educationLevel?: string; educationCompleted?: string } } | undefined;
+  const m = row?.mapping;
+  if (!m) return undefined;
+  if (typeof m.educationLevel === "string") return m.educationLevel;
+  if (typeof m.educationCompleted === "string") return m.educationCompleted;
+  return undefined;
 }
 
 function shuffleCopy<T>(arr: T[]): T[] {
@@ -318,72 +326,53 @@ export default function CareerQuizPage() {
   const questionOrder: string[] = useMemo(() => {
     if (!personaId || !KNOWN_PERSONAS.includes(personaId)) return ["PERSONA"];
     if (personaId === "P1") {
-      const p1Base = ["P1_EDU_OPEN"];
-      const p1Open = (answers.P1_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
-      const p1Interest = p1Open === true ? ["P1_EDU_INTEREST_MAJORS"] : [];
-      const p1Ceil = p1Open === true ? ["P1_EDU_CEIL"] : [];
-      return [...p1Base, ...p1Interest, ...p1Ceil, ...(data.questionOrder || [])];
+      const p1Base = ["P1_EDU_LEVEL", "P1_EDU_INTEREST_MAJORS", "P1_EDU_CEIL"];
+      return [...p1Base, ...(data.questionOrder || [])];
     }
 
     if (personaId === "P3") {
-      const base = ["P3_MAJOR", "P3_MAJOR_SCOPE", "P3_EDU_OPEN"];
-      const p3Open = (answers.P3_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
-      const p3Interest = p3Open === true ? ["P3_EDU_INTEREST_MAJORS"] : [];
-      const p3Ceil = p3Open === true ? ["P3_EDU_CEIL"] : [];
+      const base = ["P3_MAJOR", "P3_MAJOR_SCOPE", "P3_EDU_LEVEL", "P3_EDU_INTEREST_MAJORS", "P3_EDU_CEIL"];
       const qualifiedNow = (answers.P3_QUALIFIED_NOW as any)?.mapping?.p3QualifiedNow as boolean | undefined;
       const experienceQ = qualifiedNow === true ? ["P3_EXPERIENCE"] : [];
-      const holland = Array.from({ length: 7 }, (_, i) => `H${i + 1}`);
       const shared = ["Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"];
-      return [...base, ...p3Interest, ...p3Ceil, "P3_QUALIFIED_NOW", ...experienceQ, ...holland, ...shared];
+      return [...base, "P3_QUALIFIED_NOW", ...experienceQ, ...INTEREST_QUESTION_IDS, ...shared];
     }
 
     if (personaId === "P4") {
-      const eduCompleted = (answers.P4_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
-      const skipMajor = eduCompleted === "lessthanhs" || eduCompleted === "highschool" || eduCompleted === "certificate" || eduCompleted === "somecollege";
-      const base = ["P4_JOB", "P4_EDU_COMPLETED", ...(skipMajor ? [] : ["P4_MAJOR"]), "P4_EDU_OPEN"];
-      const eduOpen = (answers.P4_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
-      const eduInterest = eduOpen === true ? ["P4_EDU_INTEREST_MAJORS"] : [];
-      const eduCeil = eduOpen === true ? ["P4_EDU_CEIL"] : [];
-      const holland = Array.from({ length: 7 }, (_, i) => `H${i + 1}`);
+      const eduLevel =
+        readEducationLevelKey(answers, "P4_EDU_LEVEL") ??
+        (answers.P4_EDU_COMPLETED as { mapping?: { educationCompleted?: string } } | undefined)?.mapping?.educationCompleted;
+      const skipMajor =
+        eduLevel === "lessthanhs" || eduLevel === "highschool" || eduLevel === "certificate" || eduLevel === "somecollege";
+      const base = ["P4_JOB", "P4_EDU_LEVEL", ...(skipMajor ? [] : ["P4_MAJOR"]), "P4_EDU_INTEREST_MAJORS", "P4_EDU_CEIL"];
       const shared = ["Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"];
-      return [...base, ...eduInterest, ...eduCeil, ...holland, ...shared];
+      return [...base, ...INTEREST_QUESTION_IDS, ...shared];
     }
 
     if (personaId === "P5") {
-      const factor = (answers.P5_FACTOR_SOURCE as any)?.mapping?.p5FactorSource as string | undefined;
-      const wantsEdu = factor === "edu" || factor === "both";
-      const wantsJob = factor === "job" || factor === "both";
-
-      const eduCompleted = (answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined;
+      const eduLevel =
+        readEducationLevelKey(answers, "P5_EDU_LEVEL") ??
+        (answers.P5_EDU_COMPLETED as { mapping?: { educationCompleted?: string } } | undefined)?.mapping?.educationCompleted;
       const skipMajor =
-        eduCompleted === "lessthanhs" ||
-        eduCompleted === "highschool" ||
-        eduCompleted === "certificate" ||
-        eduCompleted === "somecollege";
-
-      const eduBranch = wantsEdu ? ["P5_EDU_COMPLETED", ...(skipMajor ? [] : ["P5_MAJOR", "P5_MAJOR_SCOPE"])] : [];
-      const jobBranch = wantsJob ? ["P5_JOB", "P5_JOB_SCOPE"] : [];
-
-      const base = ["P5_FACTOR_SOURCE", ...eduBranch, ...jobBranch, "P5_EDU_OPEN"];
-      const eduOpen = (answers.P5_EDU_OPEN as any)?.mapping?.openToMoreEducation as boolean | undefined;
-      const eduInterest = eduOpen === true ? ["P5_EDU_INTEREST_MAJORS"] : [];
-      const eduCeil = eduOpen === true ? ["P5_EDU_CEIL"] : [];
-      const holland = Array.from({ length: 7 }, (_, i) => `H${i + 1}`);
+        eduLevel === "lessthanhs" ||
+        eduLevel === "highschool" ||
+        eduLevel === "certificate" ||
+        eduLevel === "somecollege";
+      const base = ["P5_EDU_LEVEL", ...(skipMajor ? [] : ["P5_MAJOR", "P5_MAJOR_SCOPE"]), "P5_EDU_INTEREST_MAJORS", "P5_EDU_CEIL"];
       const shared = ["Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"];
-      return [...base, ...eduInterest, ...eduCeil, ...holland, ...shared];
+      return [...base, ...INTEREST_QUESTION_IDS, ...shared];
     }
 
     return [];
   }, [
     personaId,
     data.questionOrder,
-    answers.P1_EDU_OPEN,
-    answers.P3_EDU_OPEN,
+    answers.P1_EDU_LEVEL,
+    answers.P3_EDU_LEVEL,
     answers.P3_QUALIFIED_NOW,
-    answers.P4_EDU_OPEN,
+    answers.P4_EDU_LEVEL,
     answers.P4_EDU_COMPLETED,
-    answers.P5_FACTOR_SOURCE,
-    answers.P5_EDU_OPEN,
+    answers.P5_EDU_LEVEL,
     answers.P5_EDU_COMPLETED,
   ]);
 
@@ -402,6 +391,17 @@ export default function CareerQuizPage() {
   const qId = questionOrder[index] || "";
 
   const q: ClientQuestion | null = useMemo(() => {
+    const interestIdx = interestIndexFromQuestionId(qId);
+    if (interestIdx !== null) {
+      const pair = hollandPairs[interestIdx];
+      return {
+        id: qId,
+        kind: "hollandBinary",
+        text: pair.prompt,
+        pair,
+        pairIndex: interestIdx,
+      };
+    }
     if (qId === "PERSONA") {
       return {
         id: "PERSONA",
@@ -410,42 +410,28 @@ export default function CareerQuizPage() {
         options: [
           {
             personaId: "P1",
-            title: "Still in school",
-            subtitle: "High school / early college — figuring out what to study",
+            title: "I'm still in school",
+            subtitle: "High school or early college — exploring what's next",
           },
           {
             personaId: "P3",
-            title: "In college / recent grad",
-            subtitle: "College student or recent graduate — deciding what to do with your degree",
+            title: "I just graduated or am about to graduate",
+            subtitle: "Ready to put your education to work",
           },
           {
             personaId: "P4",
-            title: "Working, looking to advance",
-            subtitle: "Currently working — want to grow or move within your current line of work",
+            title: "I want to move up",
+            subtitle: "Grow or advance in your current line of work",
           },
           {
             personaId: "P5",
-            title: "Exploring a career change",
-            subtitle: "Considering a new field or path — not tied to your current line of work",
+            title: "I want to change careers",
+            subtitle: "Head toward a new field or path",
           },
         ],
       };
     }
     if (qId === "P4_JOB") return { id: "P4_JOB", kind: "jobSearch", text: "What is your current job title?" };
-    if (qId === "P5_FACTOR_SOURCE") {
-      return {
-        id: "P5_FACTOR_SOURCE",
-        kind: "singleChoice",
-        text: "Do you want to factor in your education and job experience into career suggestions?",
-        options: [
-          { text: "My education only", mapping: { p5FactorSource: "edu" } },
-          { text: "My job experience only", mapping: { p5FactorSource: "job" } },
-          { text: "Both education and job", mapping: { p5FactorSource: "both" } },
-          { text: "Do not factor in my education and job experience", mapping: { p5FactorSource: "none" } },
-        ],
-      };
-    }
-    if (qId === "P5_JOB") return { id: "P5_JOB", kind: "jobSearch", text: "What is your current job title?" };
     if (qId === "P3_MAJOR") {
       return { id: "P3_MAJOR", kind: "majorSearch", text: "What did you study, or what are you currently studying?" };
     }
@@ -461,15 +447,12 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P3_EDU_OPEN") {
+    if (qId === "P3_EDU_LEVEL") {
       return {
-        id: "P3_EDU_OPEN",
+        id: "P3_EDU_LEVEL",
         kind: "singleChoice",
-        text: "Are you open to pursuing additional education or training to advance your career?",
-        options: [
-          { text: "Yes", mapping: { openToMoreEducation: true } },
-          { text: "No — I want options based on what I already have", mapping: { openToMoreEducation: false } },
-        ],
+        text: "What is the highest level of education you have completed?",
+        options: EDU_LEVEL_OPTIONS_STANDARD,
       };
     }
     if (qId === "P3_EDU_INTEREST_MAJORS") {
@@ -511,15 +494,12 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P1_EDU_OPEN") {
+    if (qId === "P1_EDU_LEVEL") {
       return {
-        id: "P1_EDU_OPEN",
+        id: "P1_EDU_LEVEL",
         kind: "singleChoice",
-        text: "Are you open to pursuing additional education or training for your future career?",
-        options: [
-          { text: "Yes", mapping: { openToMoreEducation: true } },
-          { text: "No — I want options that don't require more school", mapping: { openToMoreEducation: false } },
-        ],
+        text: "What is the highest level of education you have completed?",
+        options: EDU_LEVEL_OPTIONS_P1,
       };
     }
     if (qId === "P1_EDU_CEIL") {
@@ -540,36 +520,16 @@ export default function CareerQuizPage() {
     if (qId === "P1_EDU_INTEREST_MAJORS") {
       return { id: "P1_EDU_INTEREST_MAJORS", kind: "majorSearch", text: "If you pursued more education, what would you be interested in studying?" };
     }
-    if (qId === "P4_EDU_COMPLETED") {
+    if (qId === "P4_EDU_LEVEL") {
       return {
-        id: "P4_EDU_COMPLETED",
+        id: "P4_EDU_LEVEL",
         kind: "singleChoice",
         text: "What is the highest level of education you have completed?",
-        options: [
-          { text: "Less than high school", mapping: { educationCompleted: "lessthanhs" } },
-          { text: "High school diploma or equivalent", mapping: { educationCompleted: "highschool" } },
-          { text: "Post-secondary certificate", mapping: { educationCompleted: "certificate" } },
-          { text: "Some college", mapping: { educationCompleted: "somecollege" } },
-          { text: "Associate degree", mapping: { educationCompleted: "associate" } },
-          { text: "Bachelor's degree", mapping: { educationCompleted: "bachelor" } },
-          { text: "Master's degree", mapping: { educationCompleted: "master" } },
-          { text: "Doctoral / professional degree", mapping: { educationCompleted: "doctoral" } },
-        ],
+        options: EDU_LEVEL_OPTIONS_STANDARD,
       };
     }
     if (qId === "P4_MAJOR") {
       return { id: "P4_MAJOR", kind: "majorSearch", text: "What did you study, or what are you currently studying?" };
-    }
-    if (qId === "P4_EDU_OPEN") {
-      return {
-        id: "P4_EDU_OPEN",
-        kind: "singleChoice",
-        text: "Are you open to pursuing additional education or training to advance your career?",
-        options: [
-          { text: "Yes", mapping: { openToMoreEducation: true } },
-          { text: "No — I want options based on what I already have", mapping: { openToMoreEducation: false } },
-        ],
-      };
     }
     if (qId === "P4_EDU_INTEREST_MAJORS") {
       return { id: "P4_EDU_INTEREST_MAJORS", kind: "majorSearch", text: "If you pursued more education, what would you be interested in studying?" };
@@ -586,21 +546,12 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P5_EDU_COMPLETED") {
+    if (qId === "P5_EDU_LEVEL") {
       return {
-        id: "P5_EDU_COMPLETED",
+        id: "P5_EDU_LEVEL",
         kind: "singleChoice",
         text: "What is the highest level of education you have completed?",
-        options: [
-          { text: "Less than high school", mapping: { educationCompleted: "lessthanhs" } },
-          { text: "High school diploma or equivalent", mapping: { educationCompleted: "highschool" } },
-          { text: "Post-secondary certificate", mapping: { educationCompleted: "certificate" } },
-          { text: "Some college", mapping: { educationCompleted: "somecollege" } },
-          { text: "Associate degree", mapping: { educationCompleted: "associate" } },
-          { text: "Bachelor's degree", mapping: { educationCompleted: "bachelor" } },
-          { text: "Master's degree", mapping: { educationCompleted: "master" } },
-          { text: "Doctoral / professional degree", mapping: { educationCompleted: "doctoral" } },
-        ],
+        options: EDU_LEVEL_OPTIONS_STANDARD,
       };
     }
     if (qId === "P5_MAJOR") {
@@ -618,17 +569,6 @@ export default function CareerQuizPage() {
         ],
       };
     }
-    if (qId === "P5_EDU_OPEN") {
-      return {
-        id: "P5_EDU_OPEN",
-        kind: "singleChoice",
-        text: "Are you open to pursuing additional education or training for a new career direction?",
-        options: [
-          { text: "Yes", mapping: { openToMoreEducation: true } },
-          { text: "No — I want options based on what I already have", mapping: { openToMoreEducation: false } },
-        ],
-      };
-    }
     if (qId === "P5_EDU_INTEREST_MAJORS") {
       return { id: "P5_EDU_INTEREST_MAJORS", kind: "majorSearch", text: "If you pursued more education, what would you be interested in studying?" };
     }
@@ -641,18 +581,6 @@ export default function CareerQuizPage() {
           { text: "Bachelor's degree", mapping: { educationCeiling: "bachelor" } },
           { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } },
           { text: "Doctoral or professional degree", mapping: { educationCeiling: "doctoral" } },
-        ],
-      };
-    }
-    if (qId === "P5_JOB_SCOPE") {
-      return {
-        id: "P5_JOB_SCOPE",
-        kind: "singleChoice",
-        text: "How should we use your job experience when suggesting career changes?",
-        options: [
-          { text: "Limit careers to my current area", mapping: { p5JobScope: "current" } },
-          { text: "Include careers in adjacent fields", mapping: { p5JobScope: "adjacent" } },
-          { text: "I am open to suggestions from any career field", mapping: { p5JobScope: "any" } },
         ],
       };
     }
@@ -701,6 +629,10 @@ export default function CareerQuizPage() {
   function canContinue() {
     if (!q) return false;
     if ((q as any).kind === "persona") return Boolean((answers.personaId as any)?.value);
+    if ((q as any).kind === "hollandBinary") {
+      const ch = (answers[qId] as any)?.mapping?.choice;
+      return ch === "A" || ch === "B";
+    }
     if ((q as any).kind === "jobSearch") return Boolean((answers[qId] as any)?.mapping?.soc);
     if ((q as any).kind === "majorSearch") {
       const row = answers[qId] as any;
@@ -709,14 +641,38 @@ export default function CareerQuizPage() {
       return Boolean(row?.mapping?.primaryMajor);
     }
     if ((q as any).inputType === "state") return Boolean((answers[qId] as any)?.value);
-    if (qId === "Q3" || qId === "Q4") {
+    if (qId === "Q4") {
       const selected = ((answers[qId] as any)?.mapping?.selectedTexts as string[]) || [];
       return selected.length > 0;
     }
     return Boolean((answers[qId] as any)?.text);
   }
 
+  function onPickHollandBinary(side: "A" | "B") {
+    const idx = interestIndexFromQuestionId(qId);
+    if (idx === null) return;
+    const pair = hollandPairs[idx];
+    const winLetter = side === "A" ? pair.A.type : pair.B.type;
+    persist({
+      ...answers,
+      [qId]: {
+        text: side,
+        mapping: { choice: side, winLetter },
+      },
+    });
+  }
+
   function goNext() {
+    if (qId === "INTEREST_12") {
+      const choices = INTEREST_QUESTION_IDS.map((id) => {
+        const a = answers[id] as { mapping?: { choice?: string } } | undefined;
+        return a?.mapping?.choice as "A" | "B" | undefined;
+      });
+      if (choices.every((c) => c === "A" || c === "B")) {
+        const code = computeHollandCodeFromChoices(choices as ("A" | "B")[]);
+        persist({ ...answers, hollandCode: code });
+      }
+    }
     if (index < questionOrder.length - 1) {
       setIndex(index + 1);
       return;
@@ -762,9 +718,9 @@ export default function CareerQuizPage() {
 
           {/* Nav */}
           <div style={{ marginBottom: "2rem" }}>
-            <a href="/" style={{ textDecoration: "none" }}>
+            <Link href="/" style={{ textDecoration: "none" }}>
               <span className="logo">best<span className="logo-accent">career</span>for.me</span>
-            </a>
+            </Link>
           </div>
 
           {/* Progress bar */}
@@ -782,6 +738,11 @@ export default function CareerQuizPage() {
               <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--muted)" }}>
                 Question {index + 1} of {questionOrder.length}
               </div>
+              {interestIndexFromQuestionId(qId) !== null && (
+                <div style={{ marginTop: "0.35rem", fontSize: "0.72rem", color: "var(--muted)" }}>
+                  Interest question {interestIndexFromQuestionId(qId)! + 1} of {HOLLAND_PAIR_COUNT}
+                </div>
+              )}
             </div>
           )}
 
@@ -871,6 +832,69 @@ export default function CareerQuizPage() {
                   );
                 })}
               </div>
+
+            ) : (q as any).kind === "hollandBinary" ? (
+              (() => {
+                const hb = q as Extract<ClientQuestion, { kind: "hollandBinary" }>;
+                const pair = hb.pair;
+                const picked = (saved?.mapping?.choice as string | undefined) || "";
+                const cardBase: CSSProperties = {
+                  flex: 1,
+                  minHeight: 120,
+                  padding: "1.1rem 1rem",
+                  textAlign: "left",
+                  borderRadius: 12,
+                  border: "1.5px solid var(--border)",
+                  background: "var(--paper)",
+                  cursor: "pointer",
+                  fontSize: "0.92rem",
+                  lineHeight: 1.45,
+                  color: "var(--ink)",
+                  transition: "border-color 0.15s, background 0.15s",
+                };
+                return (
+                  <div>
+                    <div
+                      className="holland-binary-row"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem",
+                        alignItems: "stretch",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onPickHollandBinary("A")}
+                        className={`holland-binary-card${picked === "A" ? " selected" : ""}`}
+                        style={cardBase}
+                      >
+                        {pair.A.text}
+                      </button>
+                      <div
+                        className="holland-binary-or"
+                        style={{
+                          textAlign: "center",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                          color: "var(--muted)",
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        or
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onPickHollandBinary("B")}
+                        className={`holland-binary-card${picked === "B" ? " selected" : ""}`}
+                        style={cardBase}
+                      >
+                        {pair.B.text}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()
 
             ) : (q as any).kind === "jobSearch" ? (
               <div>
@@ -1090,10 +1114,9 @@ export default function CareerQuizPage() {
                   ))}
                 </select>
               </div>
-            ) : (q as any).kind === "persona" || (q as any).kind === "jobSearch" || (q as any).kind === "majorSearch" ? null : (
+            ) : (q as any).kind === "persona" || (q as any).kind === "hollandBinary" || (q as any).kind === "jobSearch" || (q as any).kind === "majorSearch" ? null : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {(() => {
-                  const isPeopleMulti = qId === "Q3";
                   const isPhysicalMulti = qId === "Q4";
                   const baseList = (((q as any).answers || (q as any).options) as Array<{ text: string; mapping?: any }>) || [];
                   const byText = new Map(baseList.map((a) => [a.text, a] as const));
@@ -1105,7 +1128,7 @@ export default function CareerQuizPage() {
                   return ordered.map((a) => {
                     const displayText = qId.startsWith("H") ? stripHollandTag(a.text) : a.text;
 
-                    if (isPeopleMulti || isPhysicalMulti) {
+                    if (isPhysicalMulti) {
                       const selectedTexts = (saved?.mapping?.selectedTexts as string[]) || [];
                       const isSelected = selectedTexts.includes(a.text);
                       return (
@@ -1116,15 +1139,6 @@ export default function CareerQuizPage() {
                             const nextSelected = isSelected
                               ? selectedTexts.filter((t) => t !== a.text)
                               : [...selectedTexts, a.text];
-
-                            if (isPeopleMulti) {
-                              const ranges = nextSelected
-                                .map((t) => (baseList.find((x) => x.text === t)?.mapping as any) || {})
-                                .filter((m) => m.peopleContactMin != null && m.peopleContactMax != null)
-                                .map((m) => ({ min: m.peopleContactMin, max: m.peopleContactMax }));
-                              onPickOption("__multi__", { selectedTexts: nextSelected, peopleContactRanges: ranges });
-                              return;
-                            }
 
                             const levels = nextSelected
                               .map((t) => (baseList.find((x) => x.text === t)?.mapping as any) || {})
@@ -1227,9 +1241,25 @@ export default function CareerQuizPage() {
         @media (max-width: 600px) {
           .persona-grid { grid-template-columns: 1fr !important; }
         }
+        @media (min-width: 640px) {
+          .holland-binary-row {
+            flex-direction: row !important;
+            align-items: stretch !important;
+          }
+          .holland-binary-or {
+            align-self: center !important;
+            flex-shrink: 0 !important;
+            padding: 0 0.35rem !important;
+          }
+        }
         .persona-card-btn { transition: all 0.15s; }
         .persona-card-btn:hover { border-color: var(--amber) !important; background: var(--cream) !important; }
         .search-result-btn:hover:not(:disabled) { background: var(--cream) !important; }
+        .holland-binary-card {
+          font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+        }
+        .holland-binary-card:hover:not(.selected) { border-color: var(--amber) !important; background: var(--cream) !important; }
+        .holland-binary-card.selected { border-color: var(--amber) !important; background: rgba(200, 132, 58, 0.1) !important; }
       `}</style>
     </>
   );

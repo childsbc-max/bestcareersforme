@@ -13,40 +13,46 @@ interface AnswersSidebarProps {
 
 const QUESTION_LABELS: Record<string, string> = {
   PERSONA: "Who you are",
-  P1_EDU_OPEN: "Open to more school?",
+  P1_EDU_LEVEL: "Education level",
   P1_EDU_CEIL: "Education ceiling",
   P1_EDU_INTEREST_MAJORS: "Interest areas",
   P3_MAJOR: "Your major",
   P3_MAJOR_SCOPE: "Major scope",
-  P3_EDU_OPEN: "Open to more school?",
+  P3_EDU_LEVEL: "Education level",
   P3_EDU_INTEREST_MAJORS: "Interest areas",
   P3_EDU_CEIL: "Education ceiling",
   P3_QUALIFIED_NOW: "Qualified now?",
   P3_EXPERIENCE: "Experience level",
   P4_JOB: "Current job",
-  P4_EDU_COMPLETED: "Education completed",
+  P4_EDU_LEVEL: "Education level",
   P4_MAJOR: "Your major",
-  P4_EDU_OPEN: "Open to more school?",
   P4_EDU_INTEREST_MAJORS: "Interest areas",
   P4_EDU_CEIL: "Education ceiling",
-  P5_EDU_COMPLETED: "Education completed",
+  P5_EDU_LEVEL: "Education level",
   P5_MAJOR: "Your major",
   P5_MAJOR_SCOPE: "Major scope",
-  P5_EDU_OPEN: "Open to more school?",
   P5_EDU_INTEREST_MAJORS: "Interest areas",
   P5_EDU_CEIL: "Education ceiling",
-  P5_FACTOR_SOURCE: "Experience impact",
+  // Legacy IDs (older saved sessions)
+  P1_EDU_OPEN: "Open to more school?",
+  P3_EDU_OPEN: "Open to more school?",
+  P4_EDU_COMPLETED: "Education completed",
+  P4_EDU_OPEN: "Open to more school?",
+  P5_EDU_COMPLETED: "Education completed",
+  P5_EDU_OPEN: "Open to more school?",
 };
 
 const PERSONA_TITLES: Record<string, string> = {
-  P1: "Still in school",
-  P3: "In college / recent grad",
-  P4: "Working, looking to advance",
-  P5: "Exploring a career change",
+  P1: "I'm still in school",
+  P3: "I just graduated or am about to graduate",
+  P4: "I want to move up",
+  P5: "I want to change careers",
 };
 
 function getLabel(qId: string, quizData: QuizData): string {
   if (QUESTION_LABELS[qId]) return QUESTION_LABELS[qId];
+  const interest = /^INTEREST_(\d+)$/.exec(qId);
+  if (interest) return `Interest ${interest[1]}`;
   const p1q = quizData.p1Questions.find((q) => q.id === qId);
   if (p1q) return p1q.label;
   const hq = quizData.hollandQuestions.find((q) => q.id === qId);
@@ -54,37 +60,16 @@ function getLabel(qId: string, quizData: QuizData): string {
   return qId;
 }
 
-function getDisplayValue(qId: string, answers: Answers): string {
-  if (qId === "PERSONA") {
-    const val = (answers.personaId as any)?.value as string | undefined;
-    return PERSONA_TITLES[val || ""] || "—";
-  }
-  const ans = answers[qId] as any;
-  if (!ans) return "—";
-  if (typeof ans === "string") return ans;
-  if (ans.value) return ans.value;
-  if (ans.text === "__multi__") {
-    const texts = (ans.mapping?.selectedTexts as string[]) || [];
-    return texts.join(", ") || "—";
-  }
-  if (ans.text) return ans.text.replace(/\s*\[[RIASEC]\]\s*$/, "");
-  return "—";
-}
+type SidebarItem = { qId: string; label: string; value: string };
 
-export function AnswersSidebar({ answers, answeredIds, quizData, onJumpTo }: AnswersSidebarProps) {
-  const [open, setOpen] = useState(false);
-
-  const items = answeredIds
-    .map((qId) => ({
-      qId,
-      label: getLabel(qId, quizData),
-      value: getDisplayValue(qId, answers),
-    }))
-    .filter((item) => item.value !== "—");
-
-  if (items.length === 0) return null;
-
-  const SidebarContent = () => (
+function AnswersSidebarContent({
+  items,
+  onJumpTo,
+}: {
+  items: SidebarItem[];
+  onJumpTo?: (qId: string) => void;
+}) {
+  return (
     <div>
       <div
         style={{
@@ -156,6 +141,41 @@ export function AnswersSidebar({ answers, answeredIds, quizData, onJumpTo }: Ans
       </div>
     </div>
   );
+}
+
+function getDisplayValue(qId: string, answers: Answers): string {
+  if (qId === "PERSONA") {
+    const val = (answers.personaId as any)?.value as string | undefined;
+    return PERSONA_TITLES[val || ""] || "—";
+  }
+  const ans = answers[qId] as any;
+  if (!ans) return "—";
+  if (/^INTEREST_\d+$/.test(qId)) {
+    const ch = ans.mapping?.choice;
+    if (ch === "A" || ch === "B") return ch === "A" ? "Option A" : "Option B";
+  }
+  if (typeof ans === "string") return ans;
+  if (ans.value) return ans.value;
+  if (ans.text === "__multi__") {
+    const texts = (ans.mapping?.selectedTexts as string[]) || [];
+    return texts.join(", ") || "—";
+  }
+  if (ans.text) return ans.text.replace(/\s*\[[RIASEC]\]\s*$/, "");
+  return "—";
+}
+
+export function AnswersSidebar({ answers, answeredIds, quizData, onJumpTo }: AnswersSidebarProps) {
+  const [open, setOpen] = useState(false);
+
+  const items: SidebarItem[] = answeredIds
+    .map((qId) => ({
+      qId,
+      label: getLabel(qId, quizData),
+      value: getDisplayValue(qId, answers),
+    }))
+    .filter((item) => item.value !== "—");
+
+  if (items.length === 0) return null;
 
   return (
     <>
@@ -174,7 +194,7 @@ export function AnswersSidebar({ answers, answeredIds, quizData, onJumpTo }: Ans
           overflowY: "auto",
         }}
       >
-        <SidebarContent />
+        <AnswersSidebarContent items={items} onJumpTo={onJumpTo} />
       </div>
 
       {/* Mobile bottom sheet */}
@@ -221,7 +241,7 @@ export function AnswersSidebar({ answers, answeredIds, quizData, onJumpTo }: Ans
               overflowY: "auto",
             }}
           >
-            <SidebarContent />
+            <AnswersSidebarContent items={items} onJumpTo={onJumpTo} />
           </div>
         )}
       </div>

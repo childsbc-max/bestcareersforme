@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowRight, MapPin, DollarSign, GraduationCap, Briefcase, Bot, TrendingUp } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -31,9 +32,9 @@ export default function Home() {
           zIndex: 100,
         }}
       >
-        <a href="/" style={{ textDecoration: "none" }}>
+        <Link href="/" style={{ textDecoration: "none" }}>
           <span className="logo">best<span className="logo-accent">career</span>for.me</span>
-        </a>
+        </Link>
 
         <ul
           style={{ listStyle: "none", display: "flex", gap: "2rem", alignItems: "center" }}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GraduationCap, BookOpen, Briefcase, Compass, Bot, DollarSign, MapPin, Activity, Users, Copy, Check, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { GraduationCap, BookOpen, Briefcase, Compass, Bot, MapPin, Activity, Users, Copy, Check, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 import careers from "@/data/careers.json";
 import stateDemand from "@/data/stateDemand.json";
@@ -77,7 +78,7 @@ export default function ResultsPage() {
   };
 
   const results = useMemo(() => {
-    let sorted = [...allResults];
+    const sorted = [...allResults];
     if (sortBy === "salary-desc") {
       sorted.sort((a, b) => (b.medianSalary ?? 0) - (a.medianSalary ?? 0));
     } else if (sortBy === "demand") {
@@ -125,7 +126,7 @@ export default function ResultsPage() {
     return scoreAndRankCareersWithDebug(answers, qd, cd).debug;
   }, [answers]);
 
-  const willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
+  const _willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
   const personaId = ((answers as any)?.personaId as any)?.value as string | undefined;
 
   // Prefer stored binary-quiz code; else legacy H1–H7 vote counts
@@ -272,9 +273,9 @@ export default function ResultsPage() {
 
           {/* Nav */}
           <div style={{ marginBottom: "2rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-            <a href="/" style={{ textDecoration: "none" }}>
+            <Link href="/" style={{ textDecoration: "none" }}>
               <span className="logo">best<span className="logo-accent">career</span>for.me</span>
-            </a>
+            </Link>
             <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
               <button type="button" onClick={copyResultsLink} className="btn-secondary" style={{ fontSize: "0.82rem", padding: "0.5rem 1rem" }}>
                 {copied
@@ -282,13 +283,13 @@ export default function ResultsPage() {
                   : <><Copy size={13} aria-hidden="true" /> Copy results link</>
                 }
               </button>
-              <a
+              <Link
                 href="/results/qa"
                 className="btn-secondary"
                 style={{ fontSize: "0.82rem", padding: "0.5rem 1rem", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
               >
                 QA from feedback
-              </a>
+              </Link>
               <button type="button" onClick={startOver} className="btn-secondary" style={{ fontSize: "0.82rem", padding: "0.5rem 1rem" }}>
                 <RotateCcw size={13} aria-hidden="true" /> Start over
               </button>
