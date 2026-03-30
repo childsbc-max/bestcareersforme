@@ -123,7 +123,7 @@ export default function AboutPage() {
             style={{
               position: "relative",
               width: "100%",
-              maxWidth: 280,
+              maxWidth: 196,
               aspectRatio: "3 / 4",
               borderRadius: 16,
               overflow: "hidden",
@@ -134,11 +134,11 @@ export default function AboutPage() {
           >
             <Image
               src="/brian-about.png"
-              alt="Brian, creator of bestcareerfor.me"
+              alt="Professional headshot of Brian, creator of bestcareerfor.me"
               fill
-              sizes="(max-width: 900px) 280px, 320px"
+              sizes="(max-width: 900px) 196px, 196px"
               priority
-              style={{ objectFit: "cover", objectPosition: "50% 20%" }}
+              style={{ objectFit: "cover", objectPosition: "50% 28%" }}
             />
           </div>
 
@@ -209,7 +209,7 @@ export default function AboutPage() {
       <style>{`
         @media (min-width: 900px) {
           .about-intro-grid {
-            grid-template-columns: minmax(220px, 280px) 1fr;
+            grid-template-columns: minmax(154px, 196px) 1fr;
             gap: 2.5rem;
           }
           .about-intro-grid > div:first-child {
