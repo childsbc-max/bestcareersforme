@@ -259,7 +259,7 @@
     {
       "id": "Q3",
       "label": "People Interaction",
-      "text": "How much do you want working with people to be part of your day-to-day job?",
+      "text": "How much do you want working with people to be part of your day-to-day job? Click all that apply.",
       "filterType": "SOFT FILTER",
       "answers": [
         {
