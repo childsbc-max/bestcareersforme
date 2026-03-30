@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GraduationCap, BookOpen, Briefcase, Compass, Bot, MapPin, Activity, Users, Copy, Check, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { GraduationCap, BookOpen, Briefcase, Compass, Bot, MapPin, Activity, Users, Copy, Check, RotateCcw, ChevronDown, ChevronUp, Plus } from "lucide-react";
 
 import careers from "@/data/careers.json";
 import stateDemand from "@/data/stateDemand.json";
 import quizData from "@/data/quiz-data.json";
+import relatedOccupations from "@/data/relatedOccupations.json";
 import { parseHollandCodeString } from "@/lib/holland-binary";
 import { INTEREST_QUESTION_IDS } from "@/lib/holland-pairs";
 import { scoreAndRankCareersWithDebug, educationRankFromRequirement, experienceRankFromRequirement, effectiveMajorsForPersona, countSuggestedMajorMatches } from "@/lib/scoring";
@@ -31,6 +32,8 @@ export default function ResultsPage() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
+  // addedCareers: list of {afterSoc, career} — inserted immediately after the card with matching soc
+  const [addedCareers, setAddedCareers] = useState<{ afterSoc: string; career: typeof allResults[0] }[]>([]);
 
   useEffect(() => {
     try {
@@ -55,6 +58,22 @@ export default function ResultsPage() {
     const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
     return scoreAndRankCareersWithDebug(answers, qd, cd).results;
   }, [answers]);
+
+  // Lookup map for adding related careers (soc → Career with hollandScore 0)
+  const careerBySOC = useMemo(() => {
+    const map = new Map<string, typeof allResults[0]>();
+    for (const c of careers as any[]) map.set(c.soc as string, { ...c, hollandScore: 0 });
+    return map;
+  }, []);
+
+  function addRelatedCareer(afterSoc: string, relatedSoc: string) {
+    const career = careerBySOC.get(relatedSoc);
+    if (!career) return;
+    setAddedCareers((prev) => {
+      if (prev.some((a) => a.career.soc === relatedSoc)) return prev;
+      return [...prev, { afterSoc, career }];
+    });
+  }
 
   const selectedState = ((answers as any)?.Q6 as any)?.value as string | undefined;
 
@@ -496,9 +515,21 @@ export default function ResultsPage() {
                 const salaryLowPct = Math.min(98, Math.round(((c.salaryLow || 0) / SALARY_MAX) * 100));
                 const salaryRangePct = Math.min(98 - salaryLowPct, Math.round(((salaryTop - (c.salaryLow || 0)) / SALARY_MAX) * 100));
 
+                // Build sets of already-shown SOCs so related strip can filter them
+                const shownSocs = new Set([
+                  ...results.map((r) => r.soc),
+                  ...addedCareers.map((a) => a.career.soc),
+                ]);
+
+                const relatedForCard = ((relatedOccupations as Record<string, { soc: string; title: string }[]>)[c.soc] || [])
+                  .filter((r) => !shownSocs.has(r.soc) && careerBySOC.has(r.soc));
+
+                // Gather added careers that belong after this card
+                const addedAfterThis = addedCareers.filter((a) => a.afterSoc === c.soc);
+
                 return (
+                  <React.Fragment key={c.soc}>
                   <article
-                    key={c.soc}
                     style={{
                       background: "var(--card)",
                       border: "1px solid var(--border)",
@@ -653,6 +684,151 @@ export default function ResultsPage() {
                       </div>
                     )}
                   </article>
+
+                  {/* Related careers strip */}
+                  {relatedForCard.length > 0 && (
+                    <div style={{
+                      background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 12,
+                      padding: "0.75rem 1rem", marginTop: "-0.25rem",
+                    }}>
+                      <p style={{ fontSize: "0.7rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 0.5rem" }}>
+                        Related careers
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                        {relatedForCard.map((r) => (
+                          <button
+                            key={r.soc}
+                            type="button"
+                            onClick={() => addRelatedCareer(c.soc, r.soc)}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                              fontSize: "0.78rem", color: "var(--ink)",
+                              background: "var(--card)", border: "1px solid var(--border)",
+                              borderRadius: 100, padding: "0.3rem 0.7rem", cursor: "pointer",
+                            }}
+                          >
+                            <Plus size={11} aria-hidden="true" style={{ color: "var(--amber)" }} />
+                            {r.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Added careers inserted after this card */}
+                  {addedAfterThis.map((added) => {
+                    const ac = added.career;
+                    const acExpanded = expandedCards.has(ac.soc);
+                    const acDesc = ac.jobDescription || "";
+                    const acShortDesc = acDesc.length > 200 ? acDesc.slice(0, 200) + "…" : acDesc;
+                    const acAiRisk = Number(ac.aiReplacementRisk || 0);
+                    const acAiLabel = acAiRisk < 40 ? "Low AI risk" : acAiRisk < 70 ? "Moderate AI risk" : "High AI risk";
+                    const acAiColor = acAiRisk < 40 ? "var(--sage)" : acAiRisk < 70 ? "var(--amber)" : "var(--rust)";
+                    const acDemandLevel = selectedState ? getDemandForCareerInState(ac.soc) : (ac.currentDemand || null);
+                    const acDemandStyle = acDemandLevel
+                      ? acDemandLevel.toLowerCase().includes("high")
+                        ? { background: "rgba(90,122,106,0.15)", color: "var(--sage)" }
+                        : acDemandLevel.toLowerCase().includes("average") && !acDemandLevel.toLowerCase().includes("below")
+                          ? { background: "rgba(200,132,58,0.15)", color: "var(--amber)" }
+                          : { background: "var(--cream)", color: "var(--muted)" }
+                      : null;
+                    const acMajorMatchCount = userMajors.length > 0 ? countSuggestedMajorMatches(ac.suggestedMajors, userMajors) : 0;
+                    const acMajorMatchLabel = acMajorMatchCount >= 2 ? "Field match" : acMajorMatchCount === 1 ? "Related field" : null;
+                    const acWorkPills: { label: string; icon: any }[] = [];
+                    if (ac.workSetting) {
+                      const ws = String(ac.workSetting).toLowerCase();
+                      acWorkPills.push({ label: ws.includes("indoor") || ws.includes("office") ? "Indoors" : ws.includes("outdoor") ? "Outdoors" : "Mixed setting", icon: MapPin });
+                    }
+                    if (ac.physicalDemandLevel) acWorkPills.push({ label: String(ac.physicalDemandLevel), icon: Activity });
+                    const acPeopleScore = ac.peopleContactScore ?? null;
+                    if (acPeopleScore !== null) acWorkPills.push({ label: acPeopleScore >= 3 ? "High people contact" : acPeopleScore >= 1 ? "Moderate contact" : "Low contact", icon: Users });
+
+                    const acRelated = ((relatedOccupations as Record<string, { soc: string; title: string }[]>)[ac.soc] || [])
+                      .filter((r) => !shownSocs.has(r.soc) && r.soc !== ac.soc && careerBySOC.has(r.soc));
+
+                    return (
+                      <React.Fragment key={ac.soc}>
+                        <article style={{
+                          background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden",
+                          borderLeft: "3px solid var(--amber)",
+                        }}>
+                          <div style={{ padding: "1.5rem 1.5rem 1rem" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                              <h3 style={{ fontFamily: "var(--font-playfair), 'Playfair Display', serif", fontSize: "1.15rem", color: "var(--ink)", lineHeight: 1.3, margin: 0 }}>
+                                {ac.name}
+                              </h3>
+                              {acDemandStyle && acDemandLevel && (
+                                <span style={{ ...acDemandStyle, fontSize: "0.72rem", fontWeight: 600, padding: "0.2rem 0.6rem", borderRadius: 100, whiteSpace: "nowrap" }}>
+                                  {acDemandLevel}
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ fontSize: "0.72rem", color: "var(--muted)", margin: "0 0 0.75rem", fontStyle: "italic" }}>Added from related careers</p>
+                            {/* Salary */}
+                            {(ac.salaryLow || ac.medianSalary) && (() => {
+                              const acSalaryMax = 250000;
+                              const acSalaryTop = ac.salaryHigh || ac.medianSalary || 0;
+                              const acLowPct = Math.min(98, Math.round(((ac.salaryLow || 0) / acSalaryMax) * 100));
+                              const acRangePct = Math.min(98 - acLowPct, Math.round(((acSalaryTop - (ac.salaryLow || 0)) / acSalaryMax) * 100));
+                              return (
+                                <div style={{ marginBottom: "0.75rem" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                                    <span style={{ fontSize: "0.68rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Salary range</span>
+                                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--ink)" }}>${Math.round((ac.salaryLow || 0) / 1000)}k – ${Math.round(acSalaryTop / 1000)}k</span>
+                                  </div>
+                                  <div style={{ position: "relative", height: 6, borderRadius: 3, background: "var(--border)" }}>
+                                    <div style={{ position: "absolute", left: `${acLowPct}%`, width: `${acRangePct}%`, height: "100%", borderRadius: 3, background: "var(--sage)" }} />
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                            {/* Badges */}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: acAiColor, border: `1px solid ${acAiColor}`, borderRadius: 100, padding: "0.22rem 0.6rem" }}>
+                                <Bot size={11} aria-hidden="true" /> {acAiLabel}
+                              </span>
+                              {acWorkPills.map(({ label, icon: Icon }) => (
+                                <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--muted)", border: "1px solid var(--border)", borderRadius: 100, padding: "0.22rem 0.6rem" }}>
+                                  <Icon size={11} aria-hidden="true" /> {label}
+                                </span>
+                              ))}
+                              {acMajorMatchLabel && (
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--muted)", border: "1px solid var(--border)", borderRadius: 100, padding: "0.22rem 0.6rem" }}>
+                                  <GraduationCap size={11} aria-hidden="true" /> {acMajorMatchLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {acDesc && (
+                            <div style={{ borderTop: "1px solid var(--border)", padding: "0.75rem 1.5rem" }}>
+                              <p style={{ fontSize: "0.84rem", color: "var(--muted)", lineHeight: 1.7, margin: 0 }}>
+                                {acExpanded ? acDesc : acShortDesc}
+                              </p>
+                              {acDesc.length > 200 && (
+                                <button type="button" onClick={() => toggleDescription(ac.soc)} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "0.8rem", color: "var(--amber)", fontWeight: 500, padding: "0.3rem 0", marginTop: "0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                                  {acExpanded ? <><ChevronUp size={13} aria-hidden="true" /> Read less</> : <><ChevronDown size={13} aria-hidden="true" /> Read more</>}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </article>
+                        {acRelated.length > 0 && (
+                          <div style={{ background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 12, padding: "0.75rem 1rem", marginTop: "-0.25rem" }}>
+                            <p style={{ fontSize: "0.7rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 0.5rem" }}>Related careers</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                              {acRelated.map((r) => (
+                                <button key={r.soc} type="button" onClick={() => addRelatedCareer(ac.soc, r.soc)} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.78rem", color: "var(--ink)", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 100, padding: "0.3rem 0.7rem", cursor: "pointer" }}>
+                                  <Plus size={11} aria-hidden="true" style={{ color: "var(--amber)" }} /> {r.title}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+
+                  </React.Fragment>
                 );
               })
             ) : (
