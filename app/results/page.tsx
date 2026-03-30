@@ -179,9 +179,10 @@ export default function ResultsPage() {
     const salaryMin = (answers.Q5 as any)?.mapping?.salaryMin as number | undefined;
     const salaryMax = (answers.Q5 as any)?.mapping?.salaryMax as number | undefined;
     if (salaryMin != null) {
-      const salaryLabel = salaryMax != null
-        ? `$${Math.round(salaryMin / 1000)}k\u2013$${Math.round(salaryMax / 1000)}k salary`
-        : `$${Math.round(salaryMin / 1000)}k+ salary`;
+      const salaryLabel =
+        salaryMax != null
+          ? `$${Math.round(salaryMin / 1000)}k+ salary (target range was $${Math.round(salaryMin / 1000)}k\u2013$${Math.round(salaryMax / 1000)}k)`
+          : `$${Math.round(salaryMin / 1000)}k+ salary`;
       parts.push(salaryLabel);
     }
     const jobMarketText = (answers.Q8 as any)?.text as string | undefined;
@@ -673,7 +674,7 @@ export default function ResultsPage() {
                 type="button"
                 onClick={() =>
                   applyAnswerPatch({
-                    Q5: { text: "$50,000\u2013$80,000", mapping: { salaryMin: 50000, salaryMax: 80000 } } as any,
+                    Q5: { text: "$50,000\u2013$80,000", mapping: { salaryMin: 50000 } } as any,
                   })
                 }
                 style={{
@@ -682,8 +683,10 @@ export default function ResultsPage() {
                 }}
                 className="want-more-btn"
               >
-                <div style={{ fontWeight: 500, fontSize: "0.88rem", color: "var(--ink)" }}>Lower salary range</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.15rem" }}>Set to $50k\u2013$80k range.</div>
+                <div style={{ fontWeight: 500, fontSize: "0.88rem", color: "var(--ink)" }}>Lower salary minimum</div>
+                <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.15rem" }}>
+                  Set minimum salary to $50k (keeps higher-paying jobs too).
+                </div>
               </button>
 
               {(personaId === "P4" || personaId === "P5") && (

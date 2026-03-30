@@ -257,11 +257,11 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
 
   const salaryMin = (answers.Q5 as any)?.mapping?.salaryMin as number | undefined;
   const salaryMax = (answers.Q5 as any)?.mapping?.salaryMax as number | undefined;
+  // Salary preference is a floor: exclude careers below salaryMin, but never exclude higher-paying careers.
   if (salaryMin != null || salaryMax != null) {
     result = result.filter((c) => {
       const mean = c.medianSalary ?? 0;
       if (salaryMin != null && mean < salaryMin) return false;
-      if (salaryMax != null && mean >= salaryMax) return false;
       return true;
     });
   }
@@ -409,6 +409,28 @@ export function countSuggestedMajorMatches(suggestedMajorsRaw: string | undefine
     if (matches) count++;
   }
   return count;
+}
+
+function educationAlignmentScore(userEduKey: string | undefined, careerEduReq: string | undefined): number {
+  const userRank = educationRankFromKey(userEduKey);
+  const reqRank = educationRankFromRequirement(careerEduReq || "");
+  if (userRank == null || reqRank == null) return 0;
+  // Prefer careers that match the user's level (not far below/above).
+  // Higher is better; max 0, down to negative.
+  return -Math.abs(reqRank - userRank);
+}
+
+function experienceAlignmentScore(userExpLevel: string | undefined, careerExpReq: string | undefined): number {
+  const userRank =
+    userExpLevel === "none" ? 0 :
+    userExpLevel === "little" ? 1 :
+    userExpLevel === "some" ? 2 :
+    userExpLevel === "significant" ? 3 :
+    null;
+  const reqRank = experienceRankFromRequirement(careerExpReq || "");
+  if (userRank == null || reqRank == null) return 0;
+  // Prefer careers near the user's experience level (not far above).
+  return -Math.abs(reqRank - userRank);
 }
 
 function applySoftPenalties(careers: Career[], answers: Answers): Array<Career & { _softPenalty: number }> {
@@ -563,6 +585,9 @@ export function scoreAndRankCareers(
   careerData: CareerData
 ): Array<Career & { hollandScore: number }> {
   const top3 = computeHollandTop3(answers, quizData);
+  const personaId = (answers.personaId as any)?.value as string | undefined;
+  const userEduKey = readEducationLevel(answers, personaId);
+  const userExpLevel = personaId === "P3" ? ((answers.P3_EXPERIENCE as any)?.mapping?.p3ExperienceLevel as string | undefined) : undefined;
   let careers: Career[] = careerData.careers || [];
 
   careers = applyHardFilters(careers, answers, careerData);
@@ -575,13 +600,19 @@ export function scoreAndRankCareers(
     .map((c) => ({
       ...c,
       hollandScore: scoreHolland(c, top3),
+      _eduAlign: educationAlignmentScore(userEduKey, c.educationRequirements),
+      _expAlign: experienceAlignmentScore(userExpLevel, (c as any).experienceRequirements),
     }))
     .sort((a, b) => {
       const penaltyDiff = (a._penalty || 0) - (b._penalty || 0);
       if (penaltyDiff !== 0) return penaltyDiff;
+      const expDiff = (b as any)._expAlign - (a as any)._expAlign;
+      if (expDiff !== 0) return expDiff;
+      const eduDiff = (b as any)._eduAlign - (a as any)._eduAlign;
+      if (eduDiff !== 0) return eduDiff;
       return (b.hollandScore || 0) - (a.hollandScore || 0);
     })
-    .map(({ _penalty, ...c }) => c);
+    .map(({ _penalty, _eduAlign, _expAlign, ...c }: any) => c);
 }
 
 export type ScoringDebugInfo = {
