@@ -413,9 +413,7 @@ export function countSuggestedMajorMatches(suggestedMajorsRaw: string | undefine
 
 function applySoftPenalties(careers: Career[], answers: Answers): Array<Career & { _softPenalty: number }> {
   const personaId = (answers.personaId as any)?.value as string | undefined;
-  const workSettings = (answers.Q2 as any)?.mapping?.workSettings as string[] | undefined;
   const workSetting = (answers.Q2 as any)?.mapping?.workSetting as string | undefined;
-  const effectiveWorkSettings = workSettings?.length ? workSettings : workSetting ? [workSetting] : undefined;
   const peopleMin = (answers.Q3 as any)?.mapping?.peopleContactMin as number | undefined;
   const peopleMax = (answers.Q3 as any)?.mapping?.peopleContactMax as number | undefined;
   const peopleRanges = (answers.Q3 as any)?.mapping?.peopleContactRanges as Array<{ min: number; max: number }> | undefined;
@@ -440,15 +438,16 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
   return careers.map((c) => {
     let penalty = 0;
 
-    if (effectiveWorkSettings?.length && c.workSetting) {
+    if (workSetting && c.workSetting) {
       const ws = (c.workSetting || "").toLowerCase();
-      const matchesAny = effectiveWorkSettings.some((setting) => {
-        if (setting === "indoors") return /office|indoor/i.test(ws);
-        if (setting === "outdoors") return /outdoor/i.test(ws);
-        if (setting === "mix_required") return /mixed/i.test(ws);
-        return true; // "mix" (open) -> always matches
-      });
-      if (!matchesAny) penalty += 25;
+      if (workSetting === "indoors") {
+        if (!/office|indoor/i.test(ws)) penalty += 25;
+      } else if (workSetting === "outdoors") {
+        if (!/outdoor/i.test(ws)) penalty += 25;
+      } else if (workSetting === "mix_required") {
+        if (!/mixed/i.test(ws)) penalty += 25;
+      }
+      // mix -> no penalty
     }
 
     if ((c.peopleContactScore != null || c.peopleContactScore === 0) && (peopleRanges?.length || (peopleMin != null && peopleMax != null))) {

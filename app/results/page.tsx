@@ -18,7 +18,7 @@ const QUIZ_STORAGE_KEY = "bestcareerfor.me:quiz_answers:v1";
 
 const PERSONA_META: Record<string, { icon: any; title: string }> = {
   P1: { icon: GraduationCap, title: "I'm still in school" },
-  P3: { icon: BookOpen,      title: "I just graduated or am about to graduate" },
+  P3: { icon: BookOpen,      title: "Recent graduate or about to graduate" },
   P4: { icon: Briefcase,     title: "I want to move up" },
   P5: { icon: Compass,       title: "I want to change careers" },
 };
@@ -159,15 +159,8 @@ export default function ResultsPage() {
   const filterSummary = useMemo(() => {
     if (!answers) return "";
     const parts: string[] = [];
-    const workSelectedTexts = (answers.Q2 as any)?.mapping?.selectedTexts as string[] | undefined;
     const workText = (answers.Q2 as any)?.text as string | undefined;
-    if (workSelectedTexts?.length) {
-      const workLabels = workSelectedTexts.map((t) => {
-        const tl = t.toLowerCase();
-        return tl.includes("indoor") || tl.includes("office") ? "Indoors" : tl.includes("outdoor") ? "Outdoors" : "Mixed setting";
-      });
-      parts.push([...new Set(workLabels)].join(" / "));
-    } else if (workText) {
+    if (workText) {
       const wl = workText.toLowerCase();
       parts.push(wl.includes("indoor") || wl.includes("office") ? "Indoors" : wl.includes("outdoor") ? "Outdoors" : "Mixed setting");
     }

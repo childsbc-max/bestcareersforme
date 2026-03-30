@@ -44,7 +44,7 @@ const QUESTION_LABELS: Record<string, string> = {
 
 const PERSONA_TITLES: Record<string, string> = {
   P1: "I'm still in school",
-  P3: "I just graduated or am about to graduate",
+  P3: "Recent graduate or about to graduate",
   P4: "I want to move up",
   P5: "I want to change careers",
 };

@@ -41,7 +41,7 @@ const PERSONA_META: Record<string, { icon: any; description: string }> = {
 
 const PERSONA_TITLES: Record<string, string> = {
   P1: "I'm still in school",
-  P3: "I just graduated or am about to graduate",
+  P3: "Recent graduate or about to graduate",
   P4: "I want to move up",
   P5: "I want to change careers",
 };
@@ -483,7 +483,7 @@ export default function CareerQuizPage() {
           },
           {
             personaId: "P3",
-            title: "I just graduated or am about to graduate",
+            title: "Recent graduate or about to graduate",
             subtitle: "Ready to put your education to work",
           },
           {
@@ -726,7 +726,7 @@ export default function CareerQuizPage() {
       return Boolean(row?.mapping?.primaryMajor);
     }
     if ((q as any).inputType === "state") return Boolean((answers[qId] as any)?.value);
-    if (qId === "Q2" || qId === "Q3" || qId === "Q4") {
+    if (qId === "Q3" || qId === "Q4") {
       const selected = ((answers[qId] as any)?.mapping?.selectedTexts as string[]) || [];
       return selected.length > 0;
     }
@@ -1208,7 +1208,6 @@ export default function CareerQuizPage() {
             ) : (q as any).kind === "persona" || (q as any).kind === "hollandBinary" || (q as any).kind === "jobSearch" || (q as any).kind === "majorSearch" ? null : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {(() => {
-                  const isWorkSettingMulti = qId === "Q2";
                   const isPeopleMulti = qId === "Q3";
                   const isPhysicalMulti = qId === "Q4";
                   const baseList = (((q as any).answers || (q as any).options) as Array<{ text: string; mapping?: any }>) || [];
@@ -1221,7 +1220,7 @@ export default function CareerQuizPage() {
                   return ordered.map((a) => {
                     const displayText = qId.startsWith("H") ? stripHollandTag(a.text) : a.text;
 
-                    if (isWorkSettingMulti || isPeopleMulti || isPhysicalMulti) {
+                    if (isPeopleMulti || isPhysicalMulti) {
                       const selectedTexts = (saved?.mapping?.selectedTexts as string[]) || [];
                       const isSelected = selectedTexts.includes(a.text);
                       return (
@@ -1232,14 +1231,6 @@ export default function CareerQuizPage() {
                             const nextSelected = isSelected
                               ? selectedTexts.filter((t) => t !== a.text)
                               : [...selectedTexts, a.text];
-
-                            if (isWorkSettingMulti) {
-                              const settings = nextSelected
-                                .map((t) => (baseList.find((x) => x.text === t)?.mapping as any)?.workSetting)
-                                .filter(Boolean);
-                              onPickOption("__multi__", { selectedTexts: nextSelected, workSettings: settings });
-                              return;
-                            }
 
                             if (isPeopleMulti) {
                               const ranges = nextSelected
