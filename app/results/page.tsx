@@ -362,7 +362,11 @@ export default function ResultsPage() {
                   </div>
                 </div>
                 {hollandCode && (
-                  <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{ textAlign: "center" }}
+                    title="Holland Code (RIASEC) describes the work environments you tend to enjoy. Your code shows your top 3 interest types in order: R=Realistic, I=Investigative, A=Artistic, S=Social, E=Enterprising, C=Conventional."
+                    aria-label="Holland Code (RIASEC) describes the work environments you tend to enjoy. Your code shows your top 3 interest types in order: R Realistic, I Investigative, A Artistic, S Social, E Enterprising, C Conventional."
+                  >
                     <div style={{
                       background: "var(--ink)",
                       color: "var(--paper)",
