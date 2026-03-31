@@ -29,6 +29,7 @@ export default function ResultsPage() {
   const [answers, setAnswers] = useState<Answers | null>(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [sortBy, setSortBy] = useState<string>("default");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
@@ -923,33 +924,6 @@ export default function ResultsPage() {
             </button>
           </section>
 
-          {/* Feedback */}
-          <section style={{ marginTop: "1.5rem", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.5rem" }}>
-            <h2 style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--ink)", marginBottom: "0.35rem" }}>Help us improve</h2>
-            <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
-              This quiz is in beta. What worked, what didn't, and what careers were you hoping to see?
-            </p>
-            <textarea
-              rows={4}
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Write your feedback here…"
-            />
-            <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <button
-                type="button"
-                onClick={submitFeedback}
-                disabled={feedbackStatus === "sending" || !feedback.trim()}
-                className="btn-primary"
-                style={{ fontSize: "0.88rem", padding: "0.65rem 1.5rem" }}
-              >
-                {feedbackStatus === "sending" ? "Sending…" : feedbackStatus === "sent" ? "Sent ✓" : "Submit feedback"}
-              </button>
-              {feedbackStatus === "sent" && <span style={{ fontSize: "0.85rem", color: "var(--sage)" }}>Thank you!</span>}
-              {feedbackStatus === "error" && <span style={{ fontSize: "0.85rem", color: "var(--rust)" }}>Could not send. Try again.</span>}
-            </div>
-          </section>
-
         </main>
       </div>
 
@@ -962,6 +936,59 @@ export default function ResultsPage() {
           router.push("/career-quiz");
         }}
       />
+
+      {/* Floating feedback widget */}
+      <div style={{ position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 50, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
+        {feedbackOpen && (
+          <div style={{
+            background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16,
+            padding: "1.25rem", width: 300, boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              <h2 style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--ink)", margin: 0 }}>Help us improve</h2>
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.1rem", lineHeight: 1, padding: "0.1rem 0.25rem" }}
+                aria-label="Close feedback"
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ fontSize: "0.82rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
+              This quiz is in beta. What worked, what didn't, and what careers were you hoping to see?
+            </p>
+            <textarea
+              rows={4}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Write your feedback here…"
+              style={{ width: "100%", boxSizing: "border-box" }}
+            />
+            <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={submitFeedback}
+                disabled={feedbackStatus === "sending" || !feedback.trim()}
+                className="btn-primary"
+                style={{ fontSize: "0.85rem", padding: "0.55rem 1.25rem" }}
+              >
+                {feedbackStatus === "sending" ? "Sending…" : feedbackStatus === "sent" ? "Sent ✓" : "Submit"}
+              </button>
+              {feedbackStatus === "sent" && <span style={{ fontSize: "0.82rem", color: "var(--sage)" }}>Thank you!</span>}
+              {feedbackStatus === "error" && <span style={{ fontSize: "0.82rem", color: "var(--rust)" }}>Could not send.</span>}
+            </div>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setFeedbackOpen((o) => !o)}
+          className="btn-primary"
+          style={{ fontSize: "0.85rem", padding: "0.6rem 1.1rem", borderRadius: 100, boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}
+        >
+          Feedback
+        </button>
+      </div>
 
       <style>{`
         .want-more-btn:hover { border-color: var(--amber) !important; background: var(--cream) !important; }
