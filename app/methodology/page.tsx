@@ -98,7 +98,8 @@ export default function MethodologyPage() {
           .nav-dropdown-menu {
             display: none;
             position: absolute;
-            top: calc(100% + 0.65rem);
+            top: 100%;
+            padding-top: 0.65rem;
             left: 0;
             min-width: 220px;
             background: var(--card);
