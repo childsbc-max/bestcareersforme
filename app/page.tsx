@@ -40,24 +40,40 @@ export default function Home() {
           style={{ listStyle: "none", display: "flex", gap: "2rem", alignItems: "center" }}
           className="nav-links"
         >
-          <li>
-            <a
-              href="#how-it-works"
-              style={{ textDecoration: "none", color: "var(--muted)", fontSize: "0.9rem", fontWeight: 500 }}
+          <li className="nav-dropdown">
+            <Link
+              href="/#how-it-works"
+              style={{
+                textDecoration: "none",
+                color: "var(--muted)",
+                fontSize: "0.9rem",
+                fontWeight: 500,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
             >
-              How It Works
-            </a>
+              How It Works <span aria-hidden="true" style={{ fontSize: "0.8rem" }}>▾</span>
+            </Link>
+            <div className="nav-dropdown-menu" role="menu" aria-label="How it works menu">
+              <Link className="nav-dropdown-item" href="/#how-it-works" role="menuitem">
+                Overview
+              </Link>
+              <Link className="nav-dropdown-item" href="/methodology" role="menuitem">
+                Methodology
+              </Link>
+            </div>
           </li>
           <li>
-            <a
+            <Link
               href="/about"
               style={{ textDecoration: "none", color: "var(--muted)", fontSize: "0.9rem", fontWeight: 500 }}
             >
               About
-            </a>
+            </Link>
           </li>
           <li>
-            <a
+            <Link
               href="/career-quiz"
               style={{
                 textDecoration: "none",
@@ -70,7 +86,7 @@ export default function Home() {
               }}
             >
               Take the Quiz
-            </a>
+            </Link>
           </li>
         </ul>
 
@@ -78,6 +94,31 @@ export default function Home() {
           @media (max-width: 768px) {
             .nav-links { display: none !important; }
           }
+          .nav-dropdown { position: relative; }
+          .nav-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 0.65rem);
+            left: 0;
+            min-width: 220px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.35rem;
+            box-shadow: 0 14px 40px rgba(15,14,12,0.12);
+            z-index: 200;
+          }
+          .nav-dropdown:hover .nav-dropdown-menu { display: block; }
+          .nav-dropdown-item {
+            display: block;
+            padding: 0.6rem 0.75rem;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--ink);
+            font-size: 0.9rem;
+            font-weight: 500;
+          }
+          .nav-dropdown-item:hover { background: var(--cream); }
         `}</style>
       </nav>
 
