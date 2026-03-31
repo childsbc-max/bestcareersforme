@@ -85,8 +85,8 @@ export default function ResultsQaImportPage() {
         </button>
 
         <p style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "1.25rem", lineHeight: 1.5 }}>
-          Tip: If the email shows separate ANSWERS and DEBUG blocks, paste only the ANSWERS <code>{`{ ... }`}</code> object, or the
-          combined structure your server logged.
+          Tip: You can paste both ANSWERS and DEBUG blocks together—the importer reads the first JSON object that contains
+          quiz answers. Markdown code fences around JSON and ANSWERS:/DEBUG: labels are fine to include.
         </p>
       </main>
     </div>
