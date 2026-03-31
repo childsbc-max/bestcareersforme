@@ -939,7 +939,19 @@ export default function ResultsPage() {
       />
 
       {/* Floating feedback widget */}
-      <div style={{ position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 50, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
+      <div
+        className="feedback-fab"
+        style={{
+          position: "fixed",
+          bottom: "1.5rem",
+          right: "1.5rem",
+          zIndex: 50,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: "0.5rem",
+        }}
+      >
         {feedbackOpen && (
           <div style={{
             background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16,
@@ -993,6 +1005,13 @@ export default function ResultsPage() {
 
       <style>{`
         .want-more-btn:hover { border-color: var(--amber) !important; background: var(--cream) !important; }
+        /* Mobile: keep Feedback button above the bottom answers drawer (52px tall). */
+        @media (max-width: 900px) {
+          .feedback-fab {
+            bottom: calc(1rem + 64px) !important;
+            right: 1rem !important;
+          }
+        }
       `}</style>
     </>
   );
