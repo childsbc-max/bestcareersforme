@@ -251,6 +251,7 @@ export default function ResultsPage() {
       });
       if (!res.ok) throw new Error("bad status");
       setFeedbackStatus("sent");
+      setTimeout(() => setFeedbackOpen(false), 2000);
     } catch {
       setFeedbackStatus("error");
     }
