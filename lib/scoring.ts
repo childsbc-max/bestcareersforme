@@ -355,25 +355,7 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
 
   const willingToRelocate = (answers.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
   const stateAbbr = (answers.Q6 as any)?.value as string | undefined;
-  if (willingToRelocate === false && stateAbbr) {
-    const badLevels = ["Low", "Below Average"];
-    const excludedSocs = new Set<string>();
-    for (const row of careerData.stateDemand || []) {
-      if (
-        (row.stateAbbr === stateAbbr || row.state === stateAbbr) &&
-        badLevels.includes(row.demandLevel || "")
-      ) {
-        excludedSocs.add(normalizeSoc(row.soc));
-      }
-    }
-    // If the user named an occupation as their current job, do not exclude it here: they already
-    // hold (or recently held) that role in this state, so "Low/Below Average" demand is not a
-    // reason to hide it from suggestions (e.g. Marketing Managers in SC).
-    for (const js of normalizeJobSocList(answers)) {
-      excludedSocs.delete(normalizeSoc(js));
-    }
-    result = result.filter((c) => !excludedSocs.has(normalizeSoc(c.soc)));
-  }
+  // Note: state demand is treated as a soft penalty (not a hard filter) later in scoring.
 
   return result;
 }
@@ -601,16 +583,38 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
 
 function applyWeights(
   careers: Array<Career & { _softPenalty: number }>,
-  answers: Answers
+  answers: Answers,
+  careerData: CareerData
 ): Array<Career & { _penalty: number }> {
   const jobMarketWeight = (answers.Q8 as any)?.mapping?.jobMarketWeight as string | undefined;
   const aiScale = ((answers.Q9 as any)?.mapping?.aiToleranceScale ?? 3) as number;
+  const willingToRelocate = (answers.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
+  const stateAbbr = (answers.Q6 as any)?.value as string | undefined;
+
+  const stateDemandBySoc = new Map<string, string>();
+  if (willingToRelocate === false && stateAbbr) {
+    for (const row of careerData.stateDemand || []) {
+      if (row && (row.stateAbbr === stateAbbr || row.state === stateAbbr)) {
+        const soc = normalizeSoc(row.soc);
+        if (!soc) continue;
+        stateDemandBySoc.set(soc, String(row.demandLevel || "").trim());
+      }
+    }
+  }
 
   return careers.map((c) => {
     let penalty = c._softPenalty || 0;
 
     if (jobMarketWeight === "high" && /low|blank/i.test(c.currentDemand || "")) penalty += 100;
     else if (jobMarketWeight === "medium" && /low/i.test(c.currentDemand || "")) penalty += 30;
+
+    if (jobMarketWeight && stateDemandBySoc.size > 0) {
+      const level = stateDemandBySoc.get(normalizeSoc(c.soc)) || "";
+      if (level === "Low" || level === "Below Average") {
+        if (jobMarketWeight === "high") penalty += 100;
+        else if (jobMarketWeight === "medium") penalty += 30;
+      }
+    }
 
     const aiRisk = Number(c.aiReplacementRisk || 0);
     if (aiScale === 5 && aiRisk > 30) penalty += 100;
@@ -638,7 +642,7 @@ export function scoreAndRankCareers(
   careers = applyHardFilters(careers, answers, careerData);
   careers = applyAiExclusions(careers, answers);
   const withSoft = applySoftPenalties(careers, answers);
-  const withWeights = applyWeights(withSoft, answers);
+  const withWeights = applyWeights(withSoft, answers, careerData);
 
   return withWeights
     .filter((c) => (c._penalty || 0) < 100)
@@ -743,7 +747,7 @@ export function scoreAndRankCareersWithDebug(
   debug.counts.afterAiExclusions = careers.length;
 
   const withSoft = applySoftPenalties(careers, answers);
-  const withWeights = applyWeights(withSoft, answers);
+  const withWeights = applyWeights(withSoft, answers, careerData);
   const afterPenaltyCut = withWeights.filter((c) => (c._penalty || 0) < 100);
   debug.counts.afterPenaltyCut = afterPenaltyCut.length;
 
