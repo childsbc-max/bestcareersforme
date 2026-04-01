@@ -366,6 +366,12 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
         excludedSocs.add(normalizeSoc(row.soc));
       }
     }
+    // If the user named an occupation as their current job, do not exclude it here: they already
+    // hold (or recently held) that role in this state, so "Low/Below Average" demand is not a
+    // reason to hide it from suggestions (e.g. Marketing Managers in SC).
+    for (const js of normalizeJobSocList(answers)) {
+      excludedSocs.delete(normalizeSoc(js));
+    }
     result = result.filter((c) => !excludedSocs.has(normalizeSoc(c.soc)));
   }
 
