@@ -202,8 +202,10 @@ function applyCurrentJobScope(
   }
   const useSocFallback = currentMajors.length === 0 || byOverlap.length === 0;
   if (useSocFallback) {
-    const broadPrefix = normalizeSoc(currentSoc).slice(0, 6);
-    if (broadPrefix.length >= 5) {
+    // Use SOC broad-occupation prefix (e.g. "29-1") instead of minor-group prefix (e.g. "29-114"),
+    // so job-adjacent results include obvious neighbors like NPs and PAs for nurses.
+    const broadPrefix = normalizeSoc(currentSoc).slice(0, 4);
+    if (broadPrefix.length >= 4) {
       jobScoped = jobScoped.filter((c) => normalizeSoc(c.soc).startsWith(broadPrefix));
     } else {
       const majorGroup = normalizeSoc(currentSoc).slice(0, 2);
