@@ -476,26 +476,35 @@ export default function ResultsPage() {
             </section>
           )}
 
-          {/* Optional results filters (salary floor + AI tolerance — former Q5 / Q9) */}
+          {/* Match count + salary / AI filters + sort (single toolbar) */}
           {resultsPrefs !== undefined && (
-            <section
-              aria-label="Refine results"
+            <div
+              aria-label="Results controls"
               style={{
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: 16,
-                padding: "1.25rem 1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
                 marginBottom: "1.5rem",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
               }}
             >
-              <h2 style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--ink)", marginBottom: "0.35rem" }}>Refine your matches</h2>
-              <p style={{ fontSize: "0.82rem", color: "var(--muted)", marginBottom: "1rem", lineHeight: 1.5 }}>
-                Optional filters adjust ranking and which careers appear. Your quiz answers stay the same.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div>
-                  <label htmlFor="results-salary-min" style={{ display: "block", fontSize: "0.8rem", fontWeight: 500, color: "var(--ink)", marginBottom: "0.35rem" }}>
-                    Minimum expected salary
+              <div style={{ fontSize: "0.85rem", color: "var(--muted)", minWidth: "min(100%, 11rem)" }}>
+                Showing {results.length} career matches
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.65rem",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                  flex: "1 1 auto",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <label htmlFor="results-salary-min" style={{ fontSize: "0.82rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
+                    Min salary:
                   </label>
                   <select
                     id="results-salary-min"
@@ -507,7 +516,7 @@ export default function ResultsPage() {
                         salaryMin: v === "" ? null : Number(v),
                       });
                     }}
-                    style={{ fontSize: "0.85rem", padding: "0.45rem 0.75rem", width: "100%", maxWidth: 320 }}
+                    style={{ fontSize: "0.82rem", padding: "0.4rem 0.75rem", minWidth: 140 }}
                   >
                     {SALARY_MIN_OPTIONS.map((o) => (
                       <option key={String(o.value ?? "none")} value={o.value === null ? "" : String(o.value)}>
@@ -516,9 +525,9 @@ export default function ResultsPage() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label htmlFor="results-ai-scale" style={{ display: "block", fontSize: "0.8rem", fontWeight: 500, color: "var(--ink)", marginBottom: "0.35rem" }}>
-                    AI and automation comfort
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <label htmlFor="results-ai-scale" style={{ fontSize: "0.82rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
+                    AI comfort:
                   </label>
                   <select
                     id="results-ai-scale"
@@ -534,7 +543,7 @@ export default function ResultsPage() {
                         aiToleranceScale: v === "" ? null : Number(v),
                       });
                     }}
-                    style={{ fontSize: "0.85rem", padding: "0.45rem 0.75rem", width: "100%", maxWidth: 420 }}
+                    style={{ fontSize: "0.82rem", padding: "0.4rem 0.75rem", minWidth: 200, maxWidth: "min(320px, 42vw)" }}
                   >
                     {AI_TOLERANCE_OPTIONS.map((o) => (
                       <option key={String(o.value ?? "default")} value={o.value === null ? "" : String(o.value)}>
@@ -543,43 +552,35 @@ export default function ResultsPage() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ fontSize: "0.82rem", padding: "0.45rem 1rem" }}
-                    onClick={() => setResultsPrefs({ salaryMin: null, aiToleranceScale: null })}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <label htmlFor="sort-by" style={{ fontSize: "0.82rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
+                    Sort by:
+                  </label>
+                  <select
+                    id="sort-by"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    style={{ fontSize: "0.82rem", padding: "0.4rem 0.75rem", width: "auto", minWidth: 148 }}
                   >
-                    Reset filters
-                  </button>
+                    <option value="default">Best match</option>
+                    <option value="salary-desc">Salary (high to low)</option>
+                    <option value="demand">Demand level</option>
+                    <option value="edu-most">Education (most)</option>
+                    <option value="edu-least">Education (least)</option>
+                    <option value="exp-most">Experience (most)</option>
+                    <option value="exp-least">Experience (least)</option>
+                    <option value="ai-risk">AI risk (highest)</option>
+                  </select>
                 </div>
-              </div>
-            </section>
-          )}
-
-          {/* Sort + count */}
-          {allResults.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
-              <div style={{ fontSize: "0.85rem", color: "var(--muted)", flex: 1 }}>
-                Showing {results.length} career matches
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <label htmlFor="sort-by" style={{ fontSize: "0.82rem", color: "var(--muted)", whiteSpace: "nowrap" }}>Sort by:</label>
-                <select
-                  id="sort-by"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  style={{ fontSize: "0.82rem", padding: "0.4rem 0.75rem", width: "auto" }}
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: "0.82rem", padding: "0.4rem 0.75rem" }}
+                  title="Clear salary and AI filters"
+                  onClick={() => setResultsPrefs({ salaryMin: null, aiToleranceScale: null })}
                 >
-                  <option value="default">Best match</option>
-                  <option value="salary-desc">Salary (high to low)</option>
-                  <option value="demand">Demand level</option>
-                  <option value="edu-most">Education (most)</option>
-                  <option value="edu-least">Education (least)</option>
-                  <option value="exp-most">Experience (most)</option>
-                  <option value="exp-least">Experience (least)</option>
-                  <option value="ai-risk">AI risk (highest)</option>
-                </select>
+                  Reset
+                </button>
               </div>
             </div>
           )}

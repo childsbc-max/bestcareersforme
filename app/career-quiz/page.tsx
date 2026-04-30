@@ -859,7 +859,7 @@ export default function CareerQuizPage() {
 
             {/* Persona selection grid */}
             {(q as any).kind === "persona" ? (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }} className="persona-grid">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem" }} className="persona-grid">
                 {(q as any).options.map((o: any) => {
                   const meta = PERSONA_META[o.personaId as PersonaId];
                   const Icon = meta?.icon;
@@ -1380,20 +1380,6 @@ export default function CareerQuizPage() {
       />
 
       <style>{`
-        @media (max-width: 600px) {
-          .persona-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (min-width: 640px) {
-          .holland-binary-row {
-            flex-direction: row !important;
-            align-items: stretch !important;
-          }
-          .holland-binary-or {
-            align-self: center !important;
-            flex-shrink: 0 !important;
-            padding: 0 0.35rem !important;
-          }
-        }
         .persona-card-btn { transition: all 0.15s; }
         .persona-card-btn:hover { border-color: var(--amber) !important; background: var(--cream) !important; }
         .search-result-btn:hover:not(:disabled) { background: var(--cream) !important; }

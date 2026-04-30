@@ -127,7 +127,7 @@ function main() {
       personaId: spec.personaId,
       scenarioTitle: spec.scenarioTitle,
       scenarioRationale: spec.scenarioRationale,
-      answersSummary: buildAnswersSummary(spec.answers),
+      answersSummary: buildAnswersSummary(scoringAnswers),
       debug,
       topCareers: slice,
     };

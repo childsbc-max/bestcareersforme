@@ -13,6 +13,24 @@ import ExcelJS from "exceljs";
 
 import { parseArgs, getString, resolveTakerId, takerFilePrefix } from "./eval/cli-utils";
 
+/** Keys produced by `buildAnswersSummary` (effective inputs after scoring merge). */
+const EFF_SUMMARY_KEYS = [
+  "personaId",
+  "hollandCode",
+  "interestMode",
+  "educationCompleted",
+  "salaryMin",
+  "aiToleranceScale",
+  "state",
+  "willingToRelocate",
+  "jobMarketWeight",
+  "effectiveMajors",
+  "workSettings",
+  "peopleContactRanges",
+  "physicalDemandLevels",
+  "p4Jobs",
+] as const;
+
 type SpecLine = {
   takerId?: string;
   displayName?: string;
@@ -31,6 +49,16 @@ type TopCareerRow = {
   transferabilityScore?: number;
   skillAffinity?: { combined?: number; skillCos?: number; techJac?: number };
 };
+
+function summaryCell(val: unknown): string {
+  if (val == null || val === "") return "";
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return String(val);
+  try {
+    return JSON.stringify(val);
+  } catch {
+    return String(val);
+  }
+}
 
 function answerCell(val: unknown): string {
   if (val == null) return "";
@@ -104,6 +132,7 @@ async function main() {
 
   type ScoringFile = {
     displayName?: string;
+    answersSummary?: Record<string, unknown>;
     topCareers?: TopCareerRow[];
     debug?: { counts?: Record<string, number> };
   };
@@ -133,6 +162,11 @@ async function main() {
 
     for (const k of answerKeys) {
       row[`Q_${k}`] = answerCell(spec.answers[k]);
+    }
+
+    const summ = scoring.answersSummary || {};
+    for (const k of EFF_SUMMARY_KEYS) {
+      row[`eff_${k}`] = summaryCell(summ[k]);
     }
 
     const counts = scoring.debug?.counts;
@@ -165,6 +199,7 @@ async function main() {
   /** First column is human label (fixture + scoring JSON); header `name` reads clearly in Excel vs `displayName`. */
   const baseCols = ["name", "takerId", "personaId", "scenarioTitle", "scenarioRationale"];
   const qCols = answerKeys.map((k) => `Q_${k}`);
+  const effCols = EFF_SUMMARY_KEYS.map((k) => `eff_${k}`);
   const debugCols = [
     "debug_start",
     "debug_afterHardFilters",
@@ -173,7 +208,7 @@ async function main() {
     "debug_afterPenaltyCut",
     "debug_final",
   ];
-  const headers = [...baseCols, ...qCols, ...debugCols, ...careerHeaders];
+  const headers = [...baseCols, ...qCols, ...effCols, ...debugCols, ...careerHeaders];
 
   for (const row of rowObjects) {
     for (const h of careerHeaders) {
@@ -213,7 +248,16 @@ async function main() {
     col.width = width;
   });
 
-  await wb.xlsx.writeFile(absOut);
+  try {
+    await wb.xlsx.writeFile(absOut);
+  } catch (e) {
+    const msg = (e as Error)?.message || String(e);
+    console.error(
+      `Failed to write ${absOut}: ${msg}\n` +
+        "If the workbook is open in Excel, close it and run the export again."
+    );
+    process.exit(1);
+  }
   console.error(`Wrote ${absOut} (${specs.length} rows, ${maxCareers} career rank columns max).`);
 }
 
