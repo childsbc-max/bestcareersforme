@@ -311,41 +311,6 @@
       ]
     },
     {
-      "id": "Q5",
-      "label": "Income Goal",
-      "text": "Which of these best describes what you need from your income someday?",
-      "filterType": "HARD FILTER",
-      "answers": [
-        {
-          "text": "Under $50,000",
-          "mapping": {
-            "salaryMin": 0,
-            "salaryMax": 50000
-          }
-        },
-        {
-          "text": "$50,000\u2013$80,000",
-          "mapping": {
-            "salaryMin": 50000,
-            "salaryMax": 80000
-          }
-        },
-        {
-          "text": "$80,000\u2013$120,000",
-          "mapping": {
-            "salaryMin": 80000,
-            "salaryMax": 120000
-          }
-        },
-        {
-          "text": "$120,000 or more",
-          "mapping": {
-            "salaryMin": 120000
-          }
-        }
-      ]
-    },
-    {
       "id": "Q6",
       "label": "Location",
       "text": "What state do you currently live in?",
@@ -604,44 +569,6 @@
           }
         }
       ]
-    },
-    {
-      "id": "Q9",
-      "label": "AI Disruption Tolerance",
-      "text": "How do you feel about working in a field where your tools and methods may change significantly due to AI and automation?",
-      "filterType": "SCORED FILTER",
-      "answers": [
-        {
-          "text": "1 \u2014 I am confident I can navigate AI-related job changes (high AI risk tolerance)",
-          "mapping": {
-            "aiToleranceScale": 1
-          }
-        },
-        {
-          "text": "2 \u2014 I am somewhat comfortable adapting to change",
-          "mapping": {
-            "aiToleranceScale": 2
-          }
-        },
-        {
-          "text": "3 \u2014 I am neutral \u2014 it depends on the career",
-          "mapping": {
-            "aiToleranceScale": 3
-          }
-        },
-        {
-          "text": "4 \u2014 I prefer fields where AI impact is limited",
-          "mapping": {
-            "aiToleranceScale": 4
-          }
-        },
-        {
-          "text": "5 \u2014 I do not want to work in a field being impacted by AI (low AI risk tolerance)",
-          "mapping": {
-            "aiToleranceScale": 5
-          }
-        }
-      ]
     }
   ],
   "questionOrder": [
@@ -655,10 +582,8 @@
     "Q2",
     "Q3",
     "Q4",
-    "Q5",
     "Q6",
     "Q7",
-    "Q8",
-    "Q9"
+    "Q8"
   ]
 }

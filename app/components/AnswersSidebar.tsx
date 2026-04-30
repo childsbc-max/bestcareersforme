@@ -26,27 +26,20 @@ const QUESTION_LABELS: Record<string, string> = {
   P4_JOB: "Jobs you've held",
   P4_EDU_LEVEL: "Education level",
   P4_MAJOR: "Your major",
+  P4_MAJOR_SCOPE: "Major scope",
   P4_EDU_INTEREST_MAJORS: "Interest areas",
   P4_EDU_CEIL: "Education ceiling",
-  P5_EDU_LEVEL: "Education level",
-  P5_MAJOR: "Your major",
-  P5_MAJOR_SCOPE: "Major scope",
-  P5_EDU_INTEREST_MAJORS: "Interest areas",
-  P5_EDU_CEIL: "Education ceiling",
   // Legacy IDs (older saved sessions)
   P1_EDU_OPEN: "Open to more school?",
   P3_EDU_OPEN: "Open to more school?",
   P4_EDU_COMPLETED: "Education completed",
   P4_EDU_OPEN: "Open to more school?",
-  P5_EDU_COMPLETED: "Education completed",
-  P5_EDU_OPEN: "Open to more school?",
 };
 
 const PERSONA_TITLES: Record<string, string> = {
   P1: "I'm still in school",
   P3: "Recent graduate or about to graduate",
-  P4: "I want to move up",
-  P5: "I want to change careers",
+  P4: "I want to move up or change careers",
 };
 
 function getLabel(qId: string, quizData: QuizData): string {

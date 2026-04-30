@@ -4,9 +4,26 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
+    "build:transferability": "tsx scripts/build-transferability.ts",
+    "build:skill-neighborhoods": "tsx scripts/build-skill-neighborhoods.ts",
+    "report:skill-neighbors": "tsx scripts/skill-neighbor-report.ts",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "eval:generate": "tsx scripts/synthetic-takers.ts --count 10 --seed 1 --persona-mix \"P4:7,P3:3\" --out synthetic-spec.jsonl",
+    "eval:regen-fixture-ten": "tsx scripts/synthetic-takers.ts --count 10 --seed 42 --persona-mix \"P1:2,P3:3,P4:5\" --out eval-fixtures/ten-takers.jsonl",
+    "eval:merge-takers": "tsx scripts/merge-taker-overrides.ts --fixture eval-fixtures/ten-takers.jsonl --overrides eval-fixtures/taker-overrides.local.json",
+    "eval:ten": "tsx scripts/run-scoring-benchmark.ts --in eval-fixtures/ten-takers.jsonl --topK 20 --out-dir ./eval-runs/ten-latest",
+    "eval:export-xlsx": "tsx scripts/export-eval-to-excel.ts --spec eval-fixtures/ten-takers.jsonl --scoring-dir eval-runs/ten-latest --out eval-runs/ten-latest/summary.xlsx",
+    "eval:ten-xlsx": "tsx scripts/run-scoring-benchmark.ts --in eval-fixtures/ten-takers.jsonl --topK 20 --out-dir ./eval-runs/ten-latest && tsx scripts/export-eval-to-excel.ts --spec eval-fixtures/ten-takers.jsonl --scoring-dir eval-runs/ten-latest --out eval-runs/ten-latest/summary.xlsx",
+    "eval:baseline-snapshot": "tsx scripts/run-scoring-benchmark.ts --in eval-fixtures/ten-takers.jsonl --topK 20 --out-dir ./eval-runs/baseline-2026-04-08 && tsx scripts/export-eval-to-excel.ts --spec eval-fixtures/ten-takers.jsonl --scoring-dir eval-runs/baseline-2026-04-08 --out eval-runs/baseline-2026-04-08/summary.xlsx",
+    "eval:post-transfer-snapshot": "tsx scripts/run-scoring-benchmark.ts --in eval-fixtures/ten-takers.jsonl --topK 20 --out-dir ./eval-runs/post-transfer-2026-04-08 && tsx scripts/export-eval-to-excel.ts --spec eval-fixtures/ten-takers.jsonl --scoring-dir eval-runs/post-transfer-2026-04-08 --out eval-runs/post-transfer-2026-04-08/summary.xlsx",
+    "eval:compare-snapshots": "tsx scripts/compare-eval-runs.ts --baseline-dir eval-runs/baseline-2026-04-08 --candidate-dir eval-runs/post-transfer-2026-04-08 --out reports/eval-compare-baseline-vs-post-transfer.txt",
+    "eval:score": "tsx scripts/run-scoring-benchmark.ts --in synthetic-spec.jsonl --topK 20 --out-dir ./eval-runs/<timestamp>",
+    "eval:judge": "tsx scripts/llm-judge.ts",
+    "eval:aggregate": "tsx scripts/aggregate-report.ts",
+    "eval:smoke": "tsx scripts/synthetic-takers.ts --count 2 --seed 7 --persona-mix \"P1:1,P4:1\" --out .eval-smoke/spec.jsonl && tsx scripts/run-scoring-benchmark.ts --in .eval-smoke/spec.jsonl --topK 20 --out-dir .eval-smoke/run && tsx scripts/llm-judge.ts --in-dir .eval-smoke/run --mock-judge --force --sleep-ms 0 && tsx scripts/aggregate-report.ts --in-dir .eval-smoke/run"
   },
   "dependencies": {
     "lucide-react": "^1.6.0",
@@ -16,13 +33,18 @@
     "resend": "^6.9.4"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.7",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "exceljs": "^4.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.19.3",
+    "typescript": "^5",
+    "zod": "^3.24.2"
   }
 }

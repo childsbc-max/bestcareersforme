@@ -1,0 +1,213 @@
+{
+  "takerId": "taker-001",
+  "personaId": "P4",
+  "scenarioTitle": "P4 · Baseline mixed preferences.",
+  "scenarioRationale": "Baseline mixed preferences. P4 currently in Airfield Operations Specialists (53-2022.00) wanting adjacent growth.",
+  "answersSummary": {
+    "personaId": "P4",
+    "hollandCode": "EAC",
+    "interestMode": "hollandCode only",
+    "educationCompleted": "bachelor",
+    "effectiveMajors": [
+      "Public Administration"
+    ],
+    "salaryMin": 80000,
+    "salaryMax": 120000,
+    "state": "WA",
+    "willingToRelocate": true,
+    "jobMarketWeight": "high",
+    "aiToleranceScale": 3,
+    "workSettings": [],
+    "peopleContactRanges": [
+      {
+        "min": 3,
+        "max": 4.5
+      }
+    ],
+    "physicalDemandLevels": [
+      "Primarily Sedentary"
+    ],
+    "p4Jobs": [
+      {
+        "soc": "53-2022.00",
+        "title": "Airfield Operations Specialists"
+      }
+    ]
+  },
+  "debug": {
+    "counts": {
+      "start": 928,
+      "afterHardFilters": 12,
+      "afterSkillAffinityGate": 10,
+      "afterAiExclusions": 10,
+      "afterPenaltyCut": 10,
+      "final": 10
+    },
+    "applied": {
+      "personaId": "P4",
+      "p4MajorGroup": "53",
+      "effectiveMajorsCount": 1,
+      "salaryMin": 80000,
+      "salaryMax": 120000,
+      "stateAbbr": "WA",
+      "willingToRelocate": true,
+      "eduCeiling": "bachelor",
+      "aiToleranceScale": 3,
+      "jobMarketWeight": "high",
+      "hasTransferabilityTable": true,
+      "hasSkillNeighborhoods": true
+    }
+  },
+  "topCareers": [
+    {
+      "socRaw": "11-9199.02",
+      "socNormalized": "11-9199",
+      "name": "Compliance Managers",
+      "medianSalary": 136550,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.0957,
+      "skillAffinity": {
+        "combined": 0.84,
+        "skillCos": 1,
+        "techJac": 0.42857142857142855
+      },
+      "jobDescription": "Plan, direct, or coordinate activities of an organization to ensure compliance with ethical or regulatory standards."
+    },
+    {
+      "socRaw": "11-1011.03",
+      "socNormalized": "11-1011",
+      "name": "Chief Sustainability Officers",
+      "medianSalary": 206420,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.12500000000000003,
+      "skillAffinity": {
+        "combined": 0.14,
+        "skillCos": 0,
+        "techJac": 0.5
+      },
+      "jobDescription": "Communicate and coordinate with management, shareholders, customers, and employees to address sustainability issues. Enact or oversee a corporate sustainability strategy."
+    },
+    {
+      "socRaw": "13-1075.00",
+      "socNormalized": "13-1075",
+      "name": "Labor Relations Specialists",
+      "medianSalary": 93500,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.0926,
+      "skillAffinity": {
+        "combined": 0.1272727272727273,
+        "skillCos": 0,
+        "techJac": 0.45454545454545453
+      },
+      "jobDescription": "Resolve disputes between workers and managers, negotiate collective bargaining agreements, or coordinate grievance procedures to handle employee complaints."
+    },
+    {
+      "socRaw": "11-9161.00",
+      "socNormalized": "11-9161",
+      "name": "Emergency Management Directors",
+      "medianSalary": 86130,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2,
+      "transferabilityScore": 0.09437046004842617,
+      "skillAffinity": {
+        "combined": 0.1,
+        "skillCos": 0,
+        "techJac": 0.35714285714285715
+      },
+      "jobDescription": "Plan and direct disaster response or crisis management activities, provide disaster preparedness training, and prepare emergency plans and procedures for natural (e.g., hurricanes, floods, earthquakes), wartime, or technological (e.g., nuclear power plant emergencies or hazardous materials spills) disasters or hostage situations."
+    },
+    {
+      "socRaw": "11-2033.00",
+      "socNormalized": "11-2033",
+      "name": "Fundraising Managers",
+      "medianSalary": 123480,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 3.3333333333333335,
+      "transferabilityScore": 0.013157894736842106,
+      "skillAffinity": {
+        "combined": 0.01473684210526316,
+        "skillCos": 0,
+        "techJac": 0.05263157894736842
+      },
+      "jobDescription": "Plan, direct, or coordinate activities to solicit and maintain funds for special projects or nonprofit organizations."
+    },
+    {
+      "socRaw": "11-3012.00",
+      "socNormalized": "11-3012",
+      "name": "Administrative Services Managers",
+      "medianSalary": 108390,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.02013463892288862,
+      "skillAffinity": {
+        "combined": 0.01473684210526316,
+        "skillCos": 0,
+        "techJac": 0.05263157894736842
+      },
+      "jobDescription": "Plan, direct, or coordinate one or more administrative services of an organization, such as records and information management, mail distribution, and other office support services."
+    },
+    {
+      "socRaw": "11-9111.00",
+      "socNormalized": "11-9111",
+      "name": "Medical and Health Services Managers",
+      "medianSalary": 117960,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.013157894736842106,
+      "skillAffinity": {
+        "combined": 0.01473684210526316,
+        "skillCos": 0,
+        "techJac": 0.05263157894736842
+      },
+      "jobDescription": "Plan, direct, or coordinate medical and health services in hospitals, clinics, managed care organizations, public health agencies, or similar organizations."
+    },
+    {
+      "socRaw": "11-9131.00",
+      "socNormalized": "11-9131",
+      "name": "Postmasters and Mail Superintendents",
+      "medianSalary": 92730,
+      "educationRequirements": "High School Diploma",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.12500000000000003,
+      "skillAffinity": {
+        "combined": 0.14,
+        "skillCos": 0,
+        "techJac": 0.5
+      },
+      "jobDescription": "Plan, direct, or coordinate operational, administrative, management, and support services of a U.S. post office; or coordinate activities of workers engaged in postal and related work in assigned post office."
+    },
+    {
+      "socRaw": "11-9032.00",
+      "socNormalized": "11-9032",
+      "name": "Education Administrators, Kindergarten through Secondary",
+      "medianSalary": 104070,
+      "educationRequirements": "Post-Master's Certificate",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.013157894736842106,
+      "skillAffinity": {
+        "combined": 0.01473684210526316,
+        "skillCos": 0,
+        "techJac": 0.05263157894736842
+      },
+      "jobDescription": "Plan, direct, or coordinate the academic, administrative, or auxiliary activities of kindergarten, elementary, or secondary schools."
+    },
+    {
+      "socRaw": "11-1021.00",
+      "socNormalized": "11-1021",
+      "name": "General and Operations Managers",
+      "medianSalary": 102950,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.0125,
+      "skillAffinity": {
+        "combined": 0,
+        "skillCos": 0,
+        "techJac": 0
+      },
+      "jobDescription": "Plan, direct, or coordinate the operations of public or private sector organizations, overseeing multiple departments or locations. Duties and responsibilities include formulating policies, managing daily operations, and planning the use of materials and human resources, but are too diverse and general in nature to be classified in any one functional area of management or administration, such as p…"
+    }
+  ]
+}

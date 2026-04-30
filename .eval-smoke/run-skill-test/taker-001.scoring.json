@@ -1,0 +1,138 @@
+{
+  "takerId": "taker-001",
+  "personaId": "P4",
+  "scenarioTitle": "P4 · Baseline mixed preferences.",
+  "scenarioRationale": "Baseline mixed preferences. P4 currently in Airfield Operations Specialists (53-2022.00) wanting adjacent growth.",
+  "answersSummary": {
+    "personaId": "P4",
+    "hollandCode": "EAC",
+    "interestMode": "hollandCode only",
+    "educationCompleted": "bachelor",
+    "effectiveMajors": [
+      "Public Administration"
+    ],
+    "salaryMin": 80000,
+    "salaryMax": 120000,
+    "state": "WA",
+    "willingToRelocate": true,
+    "jobMarketWeight": "high",
+    "aiToleranceScale": 3,
+    "workSettings": [],
+    "peopleContactRanges": [
+      {
+        "min": 3,
+        "max": 4.5
+      }
+    ],
+    "physicalDemandLevels": [
+      "Primarily Sedentary"
+    ],
+    "p4Jobs": [
+      {
+        "soc": "53-2022.00",
+        "title": "Airfield Operations Specialists"
+      }
+    ]
+  },
+  "debug": {
+    "counts": {
+      "start": 928,
+      "afterHardFilters": 12,
+      "afterSkillAffinityGate": 6,
+      "afterAiExclusions": 6,
+      "afterPenaltyCut": 6,
+      "final": 6
+    },
+    "applied": {
+      "personaId": "P4",
+      "p4MajorGroup": "53",
+      "effectiveMajorsCount": 1,
+      "salaryMin": 80000,
+      "salaryMax": 120000,
+      "stateAbbr": "WA",
+      "willingToRelocate": true,
+      "eduCeiling": "bachelor",
+      "aiToleranceScale": 3,
+      "jobMarketWeight": "high",
+      "hasTransferabilityTable": true,
+      "hasSkillNeighborhoods": true
+    }
+  },
+  "topCareers": [
+    {
+      "socRaw": "11-3012.00",
+      "socNormalized": "11-3012",
+      "name": "Administrative Services Managers",
+      "medianSalary": 108390,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0.06458991291032636,
+      "skillAffinity": {
+        "combined": 0.30300140952426524,
+        "skillCos": 0.42083529100592393,
+        "techJac": 0
+      },
+      "jobDescription": "Plan, direct, or coordinate one or more administrative services of an organization, such as records and information management, mail distribution, and other office support services."
+    },
+    {
+      "socRaw": "11-9161.00",
+      "socNormalized": "11-9161",
+      "name": "Emergency Management Directors",
+      "medianSalary": 86130,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2,
+      "transferabilityScore": 0.011101694915254237,
+      "skillAffinity": {
+        "combined": 0,
+        "skillCos": 0,
+        "techJac": 0
+      },
+      "jobDescription": "Plan and direct disaster response or crisis management activities, provide disaster preparedness training, and prepare emergency plans and procedures for natural (e.g., hurricanes, floods, earthquakes), wartime, or technological (e.g., nuclear power plant emergencies or hazardous materials spills) disasters or hostage situations."
+    },
+    {
+      "socRaw": "13-1199.07",
+      "socNormalized": "13-1199",
+      "name": "Security Management Specialists",
+      "medianSalary": 81270,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 0.6666666666666666,
+      "transferabilityScore": 0.015232558139534884,
+      "skillAffinity": {
+        "combined": 0,
+        "skillCos": 0,
+        "techJac": 0
+      },
+      "jobDescription": "Conduct security assessments for organizations, and design security systems and processes. May specialize in areas such as physical security or the safety of employees and facilities."
+    },
+    {
+      "socRaw": "11-9032.00",
+      "socNormalized": "11-9032",
+      "name": "Education Administrators, Kindergarten through Secondary",
+      "medianSalary": 104070,
+      "educationRequirements": "Post-Master's Certificate",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0,
+      "skillAffinity": {
+        "combined": 0,
+        "skillCos": 0,
+        "techJac": 0
+      },
+      "jobDescription": "Plan, direct, or coordinate the academic, administrative, or auxiliary activities of kindergarten, elementary, or secondary schools."
+    },
+    {
+      "socRaw": "11-9131.00",
+      "socNormalized": "11-9131",
+      "name": "Postmasters and Mail Superintendents",
+      "medianSalary": 92730,
+      "educationRequirements": "High School Diploma",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0,
+      "skillAffinity": {
+        "combined": 0,
+        "skillCos": 0,
+        "techJac": 0
+      },
+      "jobDescription": "Plan, direct, or coordinate operational, administrative, management, and support services of a U.S. post office; or coordinate activities of workers engaged in postal and related work in assigned post office."
+    }
+  ]
+}

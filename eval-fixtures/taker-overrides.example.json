@@ -1,0 +1,39 @@
+{
+  "taker-001": {
+    "displayName": "Sandy",
+    "scenarioTitle": "Sandy — real quiz capture",
+    "scenarioRationale": "Optional note.",
+    "answers": {
+      "personaId": { "value": "P1" },
+      "Q2": {
+        "text": "__multi__",
+        "mapping": { "selectedTexts": ["I am open to indoors or outdoors"], "workSettings": [] }
+      },
+      "Q3": {
+        "text": "__multi__",
+        "mapping": {
+          "selectedTexts": ["Mostly on my own — I work better with data, systems, or tasks than with people"],
+          "peopleContactRanges": [{ "min": 0, "max": 3 }]
+        }
+      },
+      "Q4": {
+        "text": "__multi__",
+        "mapping": {
+          "selectedTexts": ["Moderately active — a mix of physical activity and seated or desk work"],
+          "physicalDemandLevels": ["Moderately Active"]
+        }
+      },
+      "Q5": { "text": "$50,000–$80,000", "mapping": { "salaryMin": 50000, "salaryMax": 80000 } },
+      "Q6": { "value": "TX" },
+      "Q7": { "text": "Yes — I am open to moving", "mapping": { "willingToRelocate": true } },
+      "Q8": {
+        "text": "Very important — I need reliable job openings in my area",
+        "mapping": { "jobMarketWeight": "high" }
+      },
+      "Q9": { "text": "3 — I am neutral — it depends on the career", "mapping": { "aiToleranceScale": 3 } },
+      "hollandCode": "CIS",
+      "P1_EDU_LEVEL": { "text": "Bachelor's degree", "mapping": { "educationLevel": "bachelor" } },
+      "P1_EDU_INTEREST_MAJORS": { "text": "", "mapping": { "primaryMajors": [] } }
+    }
+  }
+}

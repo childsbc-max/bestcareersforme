@@ -20,6 +20,15 @@
 # production
 /build
 
+# generated local reports (e.g. npm run report:skill-neighbors)
+/reports/
+
+# scoring benchmark output (fixtures live under eval-fixtures/)
+/eval-runs/
+
+# real quiz captures / names (copy from taker-overrides.example.json)
+eval-fixtures/taker-overrides.local.json
+
 # misc
 .DS_Store
 *.pem

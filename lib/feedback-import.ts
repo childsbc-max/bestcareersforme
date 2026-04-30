@@ -16,7 +16,7 @@ export function extractAnswersFromFeedbackPayload(parsed: unknown): Answers | nu
   if (o.answers && typeof o.answers === "object" && o.answers !== null) {
     return o.answers as Answers;
   }
-  if ("personaId" in o || "Q2" in o || "H1" in o || "P4_JOB" in o || "P5_EDU_COMPLETED" in o || "P5_EDU_LEVEL" in o) {
+  if ("personaId" in o || "Q2" in o || "H1" in o || "P4_JOB" in o || "P4_MAJOR_SCOPE" in o || "P4_EDU_COMPLETED" in o) {
     return o as Answers;
   }
   return null;

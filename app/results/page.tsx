@@ -3,25 +3,37 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GraduationCap, BookOpen, Briefcase, Compass, Bot, MapPin, Activity, Users, Copy, Check, RotateCcw, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { GraduationCap, BookOpen, Briefcase, Bot, MapPin, Activity, Users, Copy, Check, RotateCcw, ChevronDown, ChevronUp, Plus } from "lucide-react";
 
 import careers from "@/data/careers.json";
+import onetBySoc from "@/data/onet-by-soc.json";
 import stateDemand from "@/data/stateDemand.json";
+import transferabilityNeighbors from "@/data/transferability-neighbors.json";
+import skillNeighborhoods from "@/data/skill-neighborhoods.json";
 import quizData from "@/data/quiz-data.json";
 import relatedOccupations from "@/data/relatedOccupations.json";
 import { parseHollandCodeString } from "@/lib/holland-binary";
 import { INTEREST_QUESTION_IDS } from "@/lib/holland-pairs";
 import { scoreAndRankCareersWithDebug, educationRankFromRequirement, experienceRankFromRequirement, effectiveMajorsForPersona, countSuggestedMajorMatches } from "@/lib/scoring";
-import type { Answers, CareerData, QuizData } from "@/lib/types";
+import type { Answers, Career, CareerData, QuizData } from "@/lib/types";
+import {
+  AI_TOLERANCE_OPTIONS,
+  RESULTS_PREFS_STORAGE_KEY,
+  SALARY_MIN_OPTIONS,
+  initialResultsPrefsFromAnswers,
+  prepareAnswersForScoring,
+  stripQuizSalaryAi,
+  type ResultsPreferenceOverrides,
+} from "@/lib/results-preferences";
 import { AnswersSidebar } from "@/app/components/AnswersSidebar";
+import { migratePersonaAnswers } from "@/lib/persona-migrate";
 
 const QUIZ_STORAGE_KEY = "bestcareerfor.me:quiz_answers:v1";
 
 const PERSONA_META: Record<string, { icon: any; title: string }> = {
   P1: { icon: GraduationCap, title: "I'm still in school" },
   P3: { icon: BookOpen,      title: "Recent graduate or about to graduate" },
-  P4: { icon: Briefcase,     title: "I want to move up" },
-  P5: { icon: Compass,       title: "I want to change careers" },
+  P4: { icon: Briefcase,     title: "I want to move up or change careers" },
 };
 
 export default function ResultsPage() {
@@ -34,31 +46,82 @@ export default function ResultsPage() {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   // addedCareers: list of {afterSoc, career} — inserted immediately after the card with matching soc
-  const [addedCareers, setAddedCareers] = useState<{ afterSoc: string; career: typeof allResults[0] }[]>([]);
+  const [addedCareers, setAddedCareers] = useState<{ afterSoc: string; career: Career & { hollandScore?: number } }[]>([]);
+  const [resultsPrefs, setResultsPrefs] = useState<ResultsPreferenceOverrides | undefined>(undefined);
 
   useEffect(() => {
     try {
+      const hydratePrefs = (baseAnswers: Answers) => {
+        try {
+          const sr = sessionStorage.getItem(RESULTS_PREFS_STORAGE_KEY);
+          if (sr) {
+            const p = JSON.parse(sr) as ResultsPreferenceOverrides;
+            setResultsPrefs({
+              salaryMin: p.salaryMin ?? null,
+              aiToleranceScale: p.aiToleranceScale ?? null,
+            });
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+        setResultsPrefs(initialResultsPrefsFromAnswers(baseAnswers));
+      };
+
       // Support shareable ?q= links
       const params = new URLSearchParams(window.location.search);
       const encoded = params.get("q");
       if (encoded) {
-        const parsed = JSON.parse(decodeURIComponent(atob(encoded)));
-        setAnswers(parsed as Answers);
+        const parsed = migratePersonaAnswers(JSON.parse(decodeURIComponent(atob(encoded))) as Answers);
+        hydratePrefs(parsed);
+        setAnswers(stripQuizSalaryAi(parsed));
         return;
       }
       const raw = localStorage.getItem(QUIZ_STORAGE_KEY);
-      setAnswers(raw ? (JSON.parse(raw) as Answers) : {});
+      const parsed = raw ? migratePersonaAnswers(JSON.parse(raw) as Answers) : ({} as Answers);
+      hydratePrefs(parsed);
+      const cleaned = stripQuizSalaryAi(parsed);
+      setAnswers(cleaned);
+      try {
+        if (raw && JSON.stringify(JSON.parse(raw)) !== JSON.stringify(cleaned)) {
+          localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(cleaned));
+        }
+      } catch {
+        /* ignore */
+      }
     } catch {
       setAnswers({});
+      setResultsPrefs({ salaryMin: null, aiToleranceScale: null });
     }
   }, []);
 
+  useEffect(() => {
+    if (resultsPrefs === undefined) return;
+    try {
+      sessionStorage.setItem(RESULTS_PREFS_STORAGE_KEY, JSON.stringify(resultsPrefs));
+    } catch {
+      /* ignore */
+    }
+  }, [resultsPrefs]);
+
+  const scoringAnswers = useMemo(() => {
+    if (!answers || resultsPrefs === undefined) return null;
+    return prepareAnswersForScoring(answers, resultsPrefs);
+  }, [answers, resultsPrefs]);
+
   const allResults = useMemo(() => {
-    if (!answers) return [];
+    if (!scoringAnswers) return [];
     const qd = quizData as QuizData;
-    const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
-    return scoreAndRankCareersWithDebug(answers, qd, cd).results;
-  }, [answers]);
+    const cd: CareerData = {
+      careers: careers as any,
+      stateDemand: stateDemand as any,
+      transferability: transferabilityNeighbors as any,
+      skillNeighborhoods: skillNeighborhoods as any,
+      onetBySoc: onetBySoc as any,
+      relatedOccupations: relatedOccupations as any,
+    };
+    return scoreAndRankCareersWithDebug(scoringAnswers, qd, cd).results;
+  }, [scoringAnswers]);
 
   // Lookup map for adding related careers (soc → Career with hollandScore 0)
   const careerBySOC = useMemo(() => {
@@ -138,13 +201,20 @@ export default function ResultsPage() {
   }, [allResults, sortBy, selectedState]);
 
   const debugInfo = useMemo(() => {
-    if (!answers) return null;
+    if (!scoringAnswers) return null;
     const qd = quizData as QuizData;
-    const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
+    const cd: CareerData = {
+      careers: careers as any,
+      stateDemand: stateDemand as any,
+      transferability: transferabilityNeighbors as any,
+      skillNeighborhoods: skillNeighborhoods as any,
+      onetBySoc: onetBySoc as any,
+      relatedOccupations: relatedOccupations as any,
+    };
     const isDebug = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1";
     if (!isDebug) return null;
-    return scoreAndRankCareersWithDebug(answers, qd, cd).debug;
-  }, [answers]);
+    return scoreAndRankCareersWithDebug(scoringAnswers, qd, cd).debug;
+  }, [scoringAnswers]);
 
   const _willingToRelocate = ((answers as any)?.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
   const personaId = ((answers as any)?.personaId as any)?.value as string | undefined;
@@ -196,14 +266,13 @@ export default function ResultsPage() {
       const wl = workText.toLowerCase();
       parts.push(wl.includes("indoor") || wl.includes("office") ? "Indoors" : wl.includes("outdoor") ? "Outdoors" : "Mixed setting");
     }
-    const salaryMin = (answers.Q5 as any)?.mapping?.salaryMin as number | undefined;
-    const salaryMax = (answers.Q5 as any)?.mapping?.salaryMax as number | undefined;
-    if (salaryMin != null) {
-      const salaryLabel =
-        salaryMax != null
-          ? `$${Math.round(salaryMin / 1000)}k+ salary (target range was $${Math.round(salaryMin / 1000)}k\u2013$${Math.round(salaryMax / 1000)}k)`
-          : `$${Math.round(salaryMin / 1000)}k+ salary`;
-      parts.push(salaryLabel);
+    const salaryMin = resultsPrefs?.salaryMin;
+    if (salaryMin != null && salaryMin > 0) {
+      parts.push(`$${Math.round(salaryMin / 1000)}k+ minimum salary (results filter)`);
+    }
+    const aiPref = resultsPrefs?.aiToleranceScale;
+    if (aiPref != null && aiPref >= 1 && aiPref <= 5) {
+      parts.push(`AI comfort scale ${aiPref} (results filter)`);
     }
     const jobMarketText = (answers.Q8 as any)?.text as string | undefined;
     if (jobMarketText) {
@@ -214,7 +283,7 @@ export default function ResultsPage() {
     const state = (answers.Q6 as any)?.value as string | undefined;
     if (state) parts.push(`in ${state}`);
     return parts.length ? `Matched to ${parts.join(", ")}` : "";
-  }, [answers]);
+  }, [answers, resultsPrefs]);
 
   // All answered question IDs for sidebar
   const answeredSidebarIds = useMemo(() => {
@@ -223,10 +292,9 @@ export default function ResultsPage() {
     if ((answers.personaId as any)?.value) ids.push("PERSONA");
     const qd = quizData as QuizData;
     const allKnownIds = [
-      "P4_JOB", "P4_EDU_LEVEL", "P4_EDU_COMPLETED", "P4_MAJOR", "P4_EDU_OPEN", "P4_EDU_INTEREST_MAJORS", "P4_EDU_CEIL",
+      "P4_JOB", "P4_EDU_LEVEL", "P4_EDU_COMPLETED", "P4_MAJOR", "P4_MAJOR_SCOPE", "P4_EDU_OPEN", "P4_EDU_INTEREST_MAJORS", "P4_EDU_CEIL",
       "P1_EDU_LEVEL", "P1_EDU_OPEN", "P1_EDU_INTEREST_MAJORS", "P1_EDU_CEIL",
       "P3_MAJOR", "P3_MAJOR_SCOPE", "P3_EDU_LEVEL", "P3_EDU_OPEN", "P3_EDU_INTEREST_MAJORS", "P3_EDU_CEIL", "P3_QUALIFIED_NOW", "P3_EXPERIENCE",
-      "P5_EDU_LEVEL", "P5_EDU_COMPLETED", "P5_MAJOR", "P5_MAJOR_SCOPE", "P5_EDU_OPEN", "P5_EDU_INTEREST_MAJORS", "P5_EDU_CEIL",
       ...Array.from({ length: 7 }, (_, i) => `H${i + 1}`),
       ...INTEREST_QUESTION_IDS,
       ...qd.p1Questions.map((q) => q.id),
@@ -242,8 +310,16 @@ export default function ResultsPage() {
     setFeedbackStatus("sending");
     try {
       const qd = quizData as QuizData;
-      const cd: CareerData = { careers: careers as any, stateDemand: stateDemand as any };
-      const { debug } = scoreAndRankCareersWithDebug(answers as Answers, qd, cd);
+      const cd: CareerData = {
+        careers: careers as any,
+        stateDemand: stateDemand as any,
+        transferability: transferabilityNeighbors as any,
+        skillNeighborhoods: skillNeighborhoods as any,
+        onetBySoc: onetBySoc as any,
+        relatedOccupations: relatedOccupations as any,
+      };
+      const merged = scoringAnswers ?? prepareAnswersForScoring(answers as Answers, resultsPrefs ?? { salaryMin: null, aiToleranceScale: null });
+      const { debug } = scoreAndRankCareersWithDebug(merged, qd, cd);
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -260,7 +336,7 @@ export default function ResultsPage() {
   async function copyResultsLink() {
     if (!answers) return;
     try {
-      const encoded = btoa(encodeURIComponent(JSON.stringify(answers)));
+      const encoded = btoa(encodeURIComponent(JSON.stringify(stripQuizSalaryAi(answers))));
       const url = `${window.location.origin}/results?q=${encoded}`;
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -271,7 +347,12 @@ export default function ResultsPage() {
   }
 
   function startOver() {
-    try { localStorage.removeItem(QUIZ_STORAGE_KEY); } catch { }
+    try {
+      localStorage.removeItem(QUIZ_STORAGE_KEY);
+      sessionStorage.removeItem(RESULTS_PREFS_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
     router.push("/career-quiz?reset=1");
   }
 
@@ -285,9 +366,13 @@ export default function ResultsPage() {
   }
 
   function applyAnswerPatch(patch: Partial<Answers>) {
-    const next = { ...(answers as Answers), ...(patch as any) } as Answers;
+    const next = stripQuizSalaryAi({ ...(answers as Answers), ...(patch as any) } as Answers);
     setAnswers(next);
-    try { localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(next)); } catch { }
+    try {
+      localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
   }
 
   if (answers == null) {
@@ -391,6 +476,87 @@ export default function ResultsPage() {
             </section>
           )}
 
+          {/* Optional results filters (salary floor + AI tolerance — former Q5 / Q9) */}
+          {resultsPrefs !== undefined && (
+            <section
+              aria-label="Refine results"
+              style={{
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: 16,
+                padding: "1.25rem 1.5rem",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <h2 style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--ink)", marginBottom: "0.35rem" }}>Refine your matches</h2>
+              <p style={{ fontSize: "0.82rem", color: "var(--muted)", marginBottom: "1rem", lineHeight: 1.5 }}>
+                Optional filters adjust ranking and which careers appear. Your quiz answers stay the same.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div>
+                  <label htmlFor="results-salary-min" style={{ display: "block", fontSize: "0.8rem", fontWeight: 500, color: "var(--ink)", marginBottom: "0.35rem" }}>
+                    Minimum expected salary
+                  </label>
+                  <select
+                    id="results-salary-min"
+                    value={resultsPrefs.salaryMin === null || resultsPrefs.salaryMin === undefined ? "" : String(resultsPrefs.salaryMin)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setResultsPrefs({
+                        ...resultsPrefs,
+                        salaryMin: v === "" ? null : Number(v),
+                      });
+                    }}
+                    style={{ fontSize: "0.85rem", padding: "0.45rem 0.75rem", width: "100%", maxWidth: 320 }}
+                  >
+                    {SALARY_MIN_OPTIONS.map((o) => (
+                      <option key={String(o.value ?? "none")} value={o.value === null ? "" : String(o.value)}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="results-ai-scale" style={{ display: "block", fontSize: "0.8rem", fontWeight: 500, color: "var(--ink)", marginBottom: "0.35rem" }}>
+                    AI and automation comfort
+                  </label>
+                  <select
+                    id="results-ai-scale"
+                    value={
+                      resultsPrefs.aiToleranceScale === null || resultsPrefs.aiToleranceScale === undefined
+                        ? ""
+                        : String(resultsPrefs.aiToleranceScale)
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setResultsPrefs({
+                        ...resultsPrefs,
+                        aiToleranceScale: v === "" ? null : Number(v),
+                      });
+                    }}
+                    style={{ fontSize: "0.85rem", padding: "0.45rem 0.75rem", width: "100%", maxWidth: 420 }}
+                  >
+                    {AI_TOLERANCE_OPTIONS.map((o) => (
+                      <option key={String(o.value ?? "default")} value={o.value === null ? "" : String(o.value)}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ fontSize: "0.82rem", padding: "0.45rem 1rem" }}
+                    onClick={() => setResultsPrefs({ salaryMin: null, aiToleranceScale: null })}
+                  >
+                    Reset filters
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Sort + count */}
           {allResults.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
@@ -459,7 +625,6 @@ export default function ResultsPage() {
                       : undefined,
                     P3_MAJOR: (answers.P3_MAJOR as any)?.mapping?.primaryMajors,
                     P4_MAJOR: (answers.P4_MAJOR as any)?.mapping?.primaryMajors,
-                    P5_MAJOR: (answers.P5_MAJOR as any)?.mapping?.primaryMajors,
                     suggestedMajorsTopResults: results.slice(0, 4).map((c) => ({
                       career: c.name,
                       soc: c.soc,
@@ -859,9 +1024,10 @@ export default function ResultsPage() {
               <button
                 type="button"
                 onClick={() =>
-                  applyAnswerPatch({
-                    Q5: { text: "$50,000\u2013$80,000", mapping: { salaryMin: 50000 } } as any,
-                  })
+                  setResultsPrefs((p) => ({
+                    salaryMin: 50_000,
+                    aiToleranceScale: (p ?? { salaryMin: null, aiToleranceScale: null }).aiToleranceScale ?? null,
+                  }))
                 }
                 style={{
                   background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 10,
@@ -871,23 +1037,17 @@ export default function ResultsPage() {
               >
                 <div style={{ fontWeight: 500, fontSize: "0.88rem", color: "var(--ink)" }}>Lower salary minimum</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.15rem" }}>
-                  Set minimum salary to $50k (keeps higher-paying jobs too).
+                  Set the results filter to at least $50k (keeps higher-paying careers too).
                 </div>
               </button>
 
-              {(personaId === "P4" || personaId === "P5") && (
+              {personaId === "P4" && (
                 <button
                   type="button"
                   onClick={() =>
-                    applyAnswerPatch(
-                      personaId === "P4"
-                        ? ({
-                            P4_EDU_CEIL: { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } } as any,
-                          } as Partial<Answers>)
-                        : ({
-                            P5_EDU_CEIL: { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } } as any,
-                          } as Partial<Answers>)
-                    )
+                    applyAnswerPatch({
+                      P4_EDU_CEIL: { text: "Master's degree or professional degree", mapping: { educationCeiling: "master" } } as any,
+                    } as Partial<Answers>)
                   }
                   style={{
                     background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 10,

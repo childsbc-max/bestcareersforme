@@ -1,0 +1,46 @@
+```json
+{
+  "overall_quality_1_to_5": 3,
+  "constraint_compliance_1_to_5": 2,
+  "coherence_1_to_5": 4,
+  "diversity_1_to_5": 4,
+  "constraint_violations": [
+    {
+      "type": "education_ceiling",
+      "detail": "Education Administrators requires Post-Master's Certificate but user has bachelor's degree ceiling",
+      "career_soc": "11-9032"
+    }
+  ],
+  "unexpected_inclusions": [
+    {
+      "career_soc": "13-1199",
+      "name": "Security Management Specialists",
+      "why_unexpected": "Very low Holland score (0.67) compared to others, seems misaligned with EAC interests"
+    }
+  ],
+  "missed_expectations": [
+    {
+      "expected_kind": "transportation_operations",
+      "detail": "Given P4's current role in Airfield Operations (53-2022), expected more transportation/logistics management roles like Transportation Managers or Logistics Coordinators"
+    }
+  ],
+  "suggested_scoring_changes": [
+    {
+      "change": "Strengthen education ceiling filter to hard-exclude Post-Master's requirements when ceiling is bachelor's",
+      "expected_effect": "Remove Education Administrators from results",
+      "risk": "May reduce result count below minimum threshold"
+    },
+    {
+      "change": "Add minimum Holland score threshold (e.g., 1.5) to prevent very low-scoring careers from appearing",
+      "expected_effect": "Remove Security Management Specialists and similar misaligned careers",
+      "risk": "Could eliminate some valid but lower-scoring options"
+    },
+    {
+      "change": "Boost scoring for careers in same major group (53) or related transportation/logistics fields for P4 persona",
+      "expected_effect": "Surface more relevant adjacent growth opportunities",
+      "risk": "May over-weight current field experience vs. stated interests"
+    }
+  ],
+  "notes": "Results show good diversity across management roles with appropriate salary ranges. Most careers align well with Public Administration major and EAC Holland code. The violation of education ceiling is concerning and should be addressed. Overall coherence is strong with management-focused roles matching the persona's background and interests."
+}
+```

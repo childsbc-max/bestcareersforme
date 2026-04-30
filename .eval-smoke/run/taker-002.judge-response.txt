@@ -1,0 +1,47 @@
+{
+  "overall_quality_1_to_5": 4,
+  "constraint_compliance_1_to_5": 5,
+  "coherence_1_to_5": 3,
+  "diversity_1_to_5": 4,
+  "constraint_violations": [],
+  "unexpected_inclusions": [
+    {
+      "career_soc": "17-2011",
+      "name": "Aerospace Engineers",
+      "why_unexpected": "Holland score 1.33 is quite low for SIE persona - primarily Investigative/Realistic work with minimal Social component"
+    },
+    {
+      "career_soc": "17-2041",
+      "name": "Chemical Engineers", 
+      "why_unexpected": "Holland score 1.33 is quite low for SIE persona - primarily Investigative/Realistic work with minimal Social component"
+    },
+    {
+      "career_soc": "17-2161",
+      "name": "Nuclear Engineers",
+      "why_unexpected": "Holland score 1.33 is quite low for SIE persona - primarily Investigative/Realistic work with minimal Social component"
+    }
+  ],
+  "missed_expectations": [
+    {
+      "expected_kind": "Healthcare management",
+      "detail": "Expected healthcare administration roles like Medical/Health Services Managers which typically align well with SIE and meet salary requirements"
+    },
+    {
+      "expected_kind": "Educational leadership",
+      "detail": "Expected education administration roles like Education Administrators which often fit SIE profile and salary floor"
+    }
+  ],
+  "suggested_scoring_changes": [
+    {
+      "change": "Increase Holland code mismatch penalty for scores below 2.0",
+      "expected_effect": "Would filter out engineering roles with minimal Social component that don't align with SIE persona",
+      "risk": "Might eliminate some valid interdisciplinary careers that blend technical and social elements"
+    },
+    {
+      "change": "Add bonus weighting for management roles when Social is primary Holland code",
+      "expected_effect": "Would elevate people-focused management positions over technical individual contributor roles",
+      "risk": "Could over-emphasize management track and miss technical roles with social components"
+    }
+  ],
+  "notes": "Results show good constraint compliance with all careers meeting $120k+ salary floor and bachelor's degree requirements. However, coherence suffers from inclusion of several engineering roles with low Holland scores (1.33) that don't align well with the SIE persona's Social emphasis. The algorithm appears to prioritize salary compliance over Holland code fit. Management and HR roles show better alignment. Diversity is good with representation across multiple sectors."
+}

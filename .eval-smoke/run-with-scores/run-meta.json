@@ -1,0 +1,12 @@
+{
+  "inputPath": ".eval-smoke\\spec.jsonl",
+  "outDir": ".eval-smoke\\run-with-scores",
+  "topK": 20,
+  "rowCount": 2,
+  "quizPath": "C:\\Users\\child\\Desktop\\career-quiz\\bestjobforme\\data\\quiz-data.json",
+  "careersPath": "C:\\Users\\child\\Desktop\\career-quiz\\bestjobforme\\data\\careers.json",
+  "statePath": "C:\\Users\\child\\Desktop\\career-quiz\\bestjobforme\\data\\stateDemand.json",
+  "relatedPath": "C:\\Users\\child\\Desktop\\career-quiz\\bestjobforme\\data\\relatedOccupations.json",
+  "onetPath": "C:\\Users\\child\\Desktop\\career-quiz\\bestjobforme\\data\\onet-by-soc.json",
+  "transferPath": "C:\\Users\\child\\Desktop\\career-quiz\\bestjobforme\\data\\transferability-neighbors.json"
+}

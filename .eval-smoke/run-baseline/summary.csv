@@ -1,0 +1,3 @@
+takerId,personaId,scenarioTitle,overall_quality,constraint_compliance,coherence,diversity,violation_count,unexpected_count,notes
+taker-001,P4,P4 · Baseline mixed preferences.,3,3,3,3,0,0,mock-judge stub (no API call)
+taker-002,P1,P1 · High salary floor ($120k+).,3,3,3,3,0,0,mock-judge stub (no API call)

@@ -1,5 +1,12 @@
 import type { Answers, Career, CareerData, HollandLetter, QuizData } from "@/lib/types";
 import { parseHollandCodeString } from "@/lib/holland-binary";
+import {
+  buildSkillFootprintVector,
+  skillTechAffinity,
+  useSkillAffinityPath,
+  applySkillAffinityGate,
+} from "@/lib/skill-neighborhoods";
+import { resolveTransferabilityScore } from "@/lib/transferability";
 
 export function normalizeSoc(soc: string | undefined | null): string {
   if (!soc) return "";
@@ -43,11 +50,9 @@ export function scoreHolland(career: Career, top3: HollandLetter[]): number {
 export type MultiMajorQuestionId =
   | "P3_MAJOR"
   | "P4_MAJOR"
-  | "P5_MAJOR"
   | "P1_EDU_INTEREST_MAJORS"
   | "P3_EDU_INTEREST_MAJORS"
-  | "P4_EDU_INTEREST_MAJORS"
-  | "P5_EDU_INTEREST_MAJORS";
+  | "P4_EDU_INTEREST_MAJORS";
 
 export function readPrimaryMajorsForQuestion(answers: Answers, qId: MultiMajorQuestionId): string[] {
   const mapping = (answers[qId] as any)?.mapping as Record<string, unknown> | undefined;
@@ -62,7 +67,7 @@ export function readPrimaryMajorsForQuestion(answers: Answers, qId: MultiMajorQu
 }
 
 /**
- * Highest completed education key for P1/P3/P4/P5: `educationLevel` on `*_EDU_LEVEL`, else legacy `educationCompleted` on P4/P5 `*_EDU_COMPLETED`.
+ * Highest completed education key for P1/P3/P4: `educationLevel` on `*_EDU_LEVEL`, else legacy `educationCompleted` on P4 `*_EDU_COMPLETED`.
  */
 export function readEducationLevel(answers: Answers, personaId: string | undefined): string | undefined {
   if (!personaId) return undefined;
@@ -71,7 +76,7 @@ export function readEducationLevel(answers: Answers, personaId: string | undefin
   const m = row?.mapping;
   if (m?.educationLevel) return String(m.educationLevel);
   if (m?.educationCompleted) return String(m.educationCompleted);
-  if (personaId === "P4" || personaId === "P5") {
+  if (personaId === "P4") {
     const legacyId = `${personaId}_EDU_COMPLETED` as keyof Answers;
     const legacy = answers[legacyId as string] as { mapping?: { educationCompleted?: string } } | undefined;
     const c = legacy?.mapping?.educationCompleted;
@@ -124,16 +129,11 @@ export function effectiveMajorsForPersona(answers: Answers, personaId: string | 
     const interest = readPrimaryMajorsForQuestion(answers, "P4_EDU_INTEREST_MAJORS");
     return unionMajors(base, interest);
   }
-  if (personaId === "P5") {
-    const base = readPrimaryMajorsForQuestion(answers, "P5_MAJOR");
-    const interest = readPrimaryMajorsForQuestion(answers, "P5_EDU_INTEREST_MAJORS");
-    return unionMajors(base, interest);
-  }
   return [];
 }
 
 /** Distinct SOC codes from any *_JOB answer (legacy single `mapping.soc` or `mapping.jobs[]`). */
-function normalizeJobSocList(answers: Answers): string[] {
+export function normalizeJobSocList(answers: Answers): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const [key, val] of Object.entries(answers || {})) {
@@ -272,8 +272,7 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
 
   // Any persona with job SOC(s) gets related-job scoping (union if multiple jobs).
   const jobSocs = normalizeJobSocList(answers);
-  // P5 has no current-job question; skip job scoping so stale P5_JOB in storage does not affect results.
-  if (jobSocs.length > 0 && personaId !== "P5") {
+  if (jobSocs.length > 0) {
     const interestedMajors = personaId === "P4" ? readPrimaryMajorsForQuestion(answers, "P4_EDU_INTEREST_MAJORS") : [];
     const allCareers = careerData.careers || [];
     if (jobSocs.length === 1) {
@@ -297,23 +296,19 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
   }
 
   const salaryMin = (answers.Q5 as any)?.mapping?.salaryMin as number | undefined;
-  const salaryMax = (answers.Q5 as any)?.mapping?.salaryMax as number | undefined;
-  // Salary preference is a floor: exclude careers below salaryMin, but never exclude higher-paying careers.
-  if (salaryMin != null || salaryMax != null) {
+  // Salary preference is a minimum floor only (no max salary filter).
+  if (salaryMin != null) {
     result = result.filter((c) => {
       const mean = c.medianSalary ?? 0;
-      if (salaryMin != null && mean < salaryMin) return false;
-      return true;
+      return mean >= salaryMin;
     });
   }
 
-  // Education ceiling (P1/P3/P4/P5): prefer CEIL answer; else completed (legacy sessions without CEIL).
-  if (personaId === "P1" || personaId === "P3" || personaId === "P4" || personaId === "P5") {
+  // Education ceiling (P1/P3/P4): prefer CEIL answer; else completed (legacy sessions without CEIL).
+  if (personaId === "P1" || personaId === "P3" || personaId === "P4") {
     const completed =
       personaId === "P4"
         ? readEducationLevel(answers, "P4") ?? "bachelor"
-        : personaId === "P5"
-        ? readEducationLevel(answers, "P5") ?? "bachelor"
         : personaId === "P3"
         ? readEducationLevel(answers, "P3") ?? "bachelor"
         : readEducationLevel(answers, "P1") ?? "highschool";
@@ -322,9 +317,7 @@ function applyHardFilters(careers: Career[], answers: Answers, careerData: Caree
         ? ((answers.P1_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
         : personaId === "P3"
         ? ((answers.P3_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
-        : personaId === "P4"
-        ? ((answers.P4_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined)
-        : ((answers.P5_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined);
+        : ((answers.P4_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined);
     const ceiling = ceilFromQuestion ?? completed;
 
     const ceilingRank = educationRankFromKey(ceiling);
@@ -414,6 +407,85 @@ export function experienceRankFromRequirement(req: string): number | null {
   return null;
 }
 
+/** Persona-tuned blend / gate / preference knobs. */
+export type PersonaScoringConfig = {
+  /** Weight on skill-neighborhood combined [0,1] when both paths active. */
+  skillBlend: number;
+  /** Weight on transferability combined [0,1] when both paths active. */
+  transferBlend: number;
+  /** Multiplies bundle `tau` in skill gate (below 1 = weaker gate). */
+  gateTauScale: number;
+  /** Max penalty points removed from unified skill+transfer signal. */
+  blendCap: number;
+  /** Max penalty points removed when career education requirement matches user level. */
+  eduFitMax: number;
+  /** Penalty removed per Holland score point (0–6 scale). */
+  hollandPerPoint: number;
+};
+
+const DEFAULT_PERSONA_SCORING: PersonaScoringConfig = {
+  skillBlend: 0.58,
+  transferBlend: 0.42,
+  gateTauScale: 0.52,
+  blendCap: 32,
+  eduFitMax: 10,
+  hollandPerPoint: 2.2,
+};
+
+const PERSONA_SCORING: Record<string, PersonaScoringConfig> = {
+  P1: {
+    skillBlend: 0.52,
+    transferBlend: 0.48,
+    gateTauScale: 0.62,
+    blendCap: 28,
+    eduFitMax: 9,
+    hollandPerPoint: 2.35,
+  },
+  P3: {
+    skillBlend: 0.5,
+    transferBlend: 0.5,
+    gateTauScale: 0.5,
+    blendCap: 34,
+    eduFitMax: 15,
+    hollandPerPoint: 2.0,
+  },
+  P4: {
+    skillBlend: 0.68,
+    transferBlend: 0.32,
+    gateTauScale: 0.36,
+    blendCap: 38,
+    eduFitMax: 11,
+    hollandPerPoint: 2.0,
+  },
+};
+
+export function getPersonaScoringConfig(personaId: string | undefined): PersonaScoringConfig {
+  if (personaId && PERSONA_SCORING[personaId]) return PERSONA_SCORING[personaId]!;
+  return DEFAULT_PERSONA_SCORING;
+}
+
+function unifiedAffinityPenaltyReduction(blend01: number, cap: number): number {
+  const x = Math.max(0, Math.min(1, blend01));
+  return Math.round(Math.min(cap, x * cap));
+}
+
+/** Preference (not eligibility): reward careers whose required education is close to the user's level. */
+function educationPreferencePenaltyReduction(
+  userEduKey: string | undefined,
+  careerEduReq: string | undefined,
+  maxReduction: number
+): number {
+  if (!userEduKey || maxReduction <= 0) return 0;
+  const u = educationRankFromKey(userEduKey);
+  const r = educationRankFromRequirement(careerEduReq || "");
+  if (u == null || r == null) return 0;
+  const diff = Math.abs(r - u);
+  if (diff === 0) return maxReduction;
+  if (diff === 1) return Math.round(maxReduction * 0.65);
+  if (diff === 2) return Math.round(maxReduction * 0.3);
+  return 0;
+}
+
 function applyAiExclusions(careers: Career[], answers: Answers): Career[] {
   const aiScale = ((answers.Q9 as any)?.mapping?.aiToleranceScale ?? 3) as number;
   const aiRisk = (c: Career) => Number(c.aiReplacementRisk || 0);
@@ -475,18 +547,19 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
 
   const p3MajorScope = (answers.P3_MAJOR_SCOPE as any)?.mapping?.p3MajorScope as string | undefined;
   const p3Majors = personaId === "P3" ? effectiveMajorsForPersona(answers, personaId) : [];
-  const p5Majors = personaId === "P5" ? effectiveMajorsForPersona(answers, personaId) : [];
-  const p5MajorScope = (answers.P5_MAJOR_SCOPE as any)?.mapping?.p5MajorScope as string | undefined;
-  const p5EduCompletedKey =
-    readEducationLevel(answers, "P5") ?? ((answers.P5_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined);
-  const p5CompletedRank = personaId === "P5" ? educationRankFromKey(p5EduCompletedKey) : null;
+  const p4MajorScopeForSoft = (answers.P4_MAJOR_SCOPE as any)?.mapping?.p4MajorScope as string | undefined;
+  const p4MajorsForSoft =
+    personaId === "P4" && p4MajorScopeForSoft ? effectiveMajorsForPersona(answers, personaId) : [];
+  const p4EduCompletedKey =
+    readEducationLevel(answers, "P4") ?? ((answers.P4_EDU_COMPLETED as any)?.mapping?.educationCompleted as string | undefined);
+  const p4CompletedRank = personaId === "P4" ? educationRankFromKey(p4EduCompletedKey) : null;
   const p3QualifiedNow = (answers.P3_QUALIFIED_NOW as any)?.mapping?.p3QualifiedNow as boolean | undefined;
   const p3ExperienceLevel = (answers.P3_EXPERIENCE as any)?.mapping?.p3ExperienceLevel as string | undefined;
 
   const multiMajors =
-    personaId === "P3" ? p3Majors : personaId === "P5" ? p5Majors : [];
+    personaId === "P3" ? p3Majors : personaId === "P4" && p4MajorScopeForSoft ? p4MajorsForSoft : [];
   const multiScope =
-    personaId === "P3" ? p3MajorScope : personaId === "P5" ? p5MajorScope : undefined;
+    personaId === "P3" ? p3MajorScope : personaId === "P4" && p4MajorScopeForSoft ? p4MajorScopeForSoft : undefined;
 
   return careers.map((c) => {
     let penalty = 0;
@@ -528,8 +601,8 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
       }
     }
 
-    // Persona 3 / 5: up to four majors — OR match; extra overlap boosts ranking
-    if ((personaId === "P3" || personaId === "P5") && multiMajors.length > 0 && c.suggestedMajors) {
+    // Persona 3 / P4 (when major-scope answered): up to four majors — OR match; extra overlap boosts ranking
+    if ((personaId === "P3" || personaId === "P4") && multiMajors.length > 0 && c.suggestedMajors) {
       const matchCount = countSuggestedMajorMatches(c.suggestedMajors, multiMajors);
       const matchesAny = matchCount >= 1;
       if (multiScope === "direct") {
@@ -573,8 +646,8 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
       // Bachelor's (3) and above: no penalty
     }
 
-    // Persona 5: same soft nudge when user has completed bachelor's or higher
-    if (personaId === "P5" && p5CompletedRank != null && p5CompletedRank >= 3) {
+    // Persona 4: soft nudge when user has completed bachelor's or higher (legacy P5 behavior retained)
+    if (personaId === "P4" && p4CompletedRank != null && p4CompletedRank >= 3) {
       const reqRank = educationRankFromRequirement(c.educationRequirements || "");
       if (reqRank === 0) penalty += 10;
     }
@@ -586,8 +659,20 @@ function applySoftPenalties(careers: Career[], answers: Answers): Array<Career &
 function applyWeights(
   careers: Array<Career & { _softPenalty: number }>,
   answers: Answers,
-  careerData: CareerData
-): Array<Career & { _penalty: number }> {
+  careerData: CareerData,
+  quizData: QuizData
+): Array<
+  Career & { _penalty: number; _transferability: number; _skillAffinityCombined: number; _blendedTransfer: number }
+> {
+  const personaId = (answers.personaId as any)?.value as string | undefined;
+  const pCfg = getPersonaScoringConfig(personaId);
+  const jobSocs = normalizeJobSocList(answers);
+  const bundle = careerData.skillNeighborhoods;
+  const footprint =
+    useSkillAffinityPath(careerData, jobSocs, personaId) ? buildSkillFootprintVector(bundle, jobSocs) : null;
+  const useSkillPath = Boolean(footprint);
+  const userEduKey = readEducationLevel(answers, personaId);
+  const top3 = computeHollandTop3(answers, quizData);
   const jobMarketWeight = (answers.Q8 as any)?.mapping?.jobMarketWeight as string | undefined;
   const aiScale = ((answers.Q9 as any)?.mapping?.aiToleranceScale ?? 3) as number;
   const willingToRelocate = (answers.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
@@ -606,6 +691,15 @@ function applyWeights(
 
   return careers.map((c) => {
     let penalty = c._softPenalty || 0;
+
+    penalty = Math.max(
+      0,
+      penalty -
+        educationPreferencePenaltyReduction(userEduKey, c.educationRequirements, pCfg.eduFitMax)
+    );
+
+    const hollandPts = scoreHolland(c, top3);
+    penalty = Math.max(0, penalty - Math.round(hollandPts * pCfg.hollandPerPoint));
 
     if (jobMarketWeight === "high" && /low|blank/i.test(c.currentDemand || "")) penalty += 100;
     else if (jobMarketWeight === "medium" && /low/i.test(c.currentDemand || "")) penalty += 30;
@@ -626,7 +720,28 @@ function applyWeights(
     else if (aiScale === 3 && aiRisk > 50) penalty += 50;
     else if (aiScale === 2 && aiRisk > 70) penalty += 40;
 
-    return { ...c, _penalty: penalty };
+    const trans01 = jobSocs.length > 0 ? resolveTransferabilityScore(careerData, jobSocs, personaId, c) : 0;
+    let skill01 = 0;
+    if (useSkillPath && footprint && bundle) {
+      skill01 = skillTechAffinity(bundle, footprint, c.soc).combined;
+    }
+
+    let blended01: number;
+    if (useSkillPath && footprint) {
+      blended01 = Math.max(0, Math.min(1, pCfg.skillBlend * skill01 + pCfg.transferBlend * trans01));
+    } else {
+      blended01 = trans01;
+    }
+
+    penalty = Math.max(0, penalty - unifiedAffinityPenaltyReduction(blended01, pCfg.blendCap));
+
+    return {
+      ...c,
+      _penalty: penalty,
+      _transferability: trans01,
+      _skillAffinityCombined: skill01,
+      _blendedTransfer: blended01,
+    };
   });
 }
 
@@ -642,9 +757,16 @@ export function scoreAndRankCareers(
   let careers: Career[] = careerData.careers || [];
 
   careers = applyHardFilters(careers, answers, careerData);
+  careers = applySkillAffinityGate(
+    careers,
+    careerData,
+    normalizeJobSocList(answers),
+    personaId,
+    getPersonaScoringConfig(personaId).gateTauScale
+  );
   careers = applyAiExclusions(careers, answers);
   const withSoft = applySoftPenalties(careers, answers);
-  const withWeights = applyWeights(withSoft, answers, careerData);
+  const withWeights = applyWeights(withSoft, answers, careerData, quizData);
 
   return withWeights
     .filter((c) => (c._penalty || 0) < 100)
@@ -657,34 +779,42 @@ export function scoreAndRankCareers(
     .sort((a, b) => {
       const penaltyDiff = (a._penalty || 0) - (b._penalty || 0);
       if (penaltyDiff !== 0) return penaltyDiff;
+      const blDiff = (b as any)._blendedTransfer - (a as any)._blendedTransfer;
+      if (blDiff !== 0) return blDiff > 0 ? 1 : blDiff < 0 ? -1 : 0;
       const expDiff = (b as any)._expAlign - (a as any)._expAlign;
       if (expDiff !== 0) return expDiff;
       const eduDiff = (b as any)._eduAlign - (a as any)._eduAlign;
       if (eduDiff !== 0) return eduDiff;
       return (b.hollandScore || 0) - (a.hollandScore || 0);
     })
-    .map(({ _penalty, _eduAlign, _expAlign, ...c }: any) => c);
+    .map(
+      ({ _penalty, _eduAlign, _expAlign, _transferability, _skillAffinityCombined, _blendedTransfer, ...c }: any) => c
+    );
 }
 
 export type ScoringDebugInfo = {
   counts: {
     start: number;
     afterHardFilters: number;
+    afterSkillAffinityGate: number;
     afterAiExclusions: number;
     afterPenaltyCut: number;
     final: number;
   };
-  applied: {
-    personaId?: string;
-    p4MajorGroup?: string;
-    effectiveMajorsCount?: number;
-    salaryMin?: number;
-    salaryMax?: number;
+    applied: {
+      personaId?: string;
+      p4MajorGroup?: string;
+      effectiveMajorsCount?: number;
+      salaryMin?: number;
     stateAbbr?: string;
     willingToRelocate?: boolean;
     eduCeiling?: string;
     aiToleranceScale?: number;
     jobMarketWeight?: string;
+    /** Precomputed `transferability-neighbors.json` present on CareerData. */
+    hasTransferabilityTable?: boolean;
+    /** Precomputed `skill-neighborhoods.json` present with non-empty vectors. */
+    hasSkillNeighborhoods?: boolean;
   };
 };
 
@@ -697,7 +827,6 @@ export function scoreAndRankCareersWithDebug(
   const effectiveMajorsCount = effectiveMajorsForPersona(answers, personaId).length;
 
   const salaryMin = (answers.Q5 as any)?.mapping?.salaryMin as number | undefined;
-  const salaryMax = (answers.Q5 as any)?.mapping?.salaryMax as number | undefined;
   const stateAbbr = (answers.Q6 as any)?.value as string | undefined;
   const willingToRelocate = (answers.Q7 as any)?.mapping?.willingToRelocate as boolean | undefined;
 
@@ -708,10 +837,6 @@ export function scoreAndRankCareersWithDebug(
       ? ((answers.P4_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined) ??
         readEducationLevel(answers, "P4") ??
         "bachelor"
-      : personaId === "P5"
-      ? ((answers.P5_EDU_CEIL as any)?.mapping?.educationCeiling as string | undefined) ??
-        readEducationLevel(answers, "P5") ??
-        "bachelor"
       : undefined;
 
   const jobMarketWeight = (answers.Q8 as any)?.mapping?.jobMarketWeight as string | undefined;
@@ -721,6 +846,7 @@ export function scoreAndRankCareersWithDebug(
     counts: {
       start: (careerData.careers || []).length,
       afterHardFilters: 0,
+      afterSkillAffinityGate: 0,
       afterAiExclusions: 0,
       afterPenaltyCut: 0,
       final: 0,
@@ -730,12 +856,16 @@ export function scoreAndRankCareersWithDebug(
       p4MajorGroup,
       effectiveMajorsCount,
       salaryMin,
-      salaryMax,
       stateAbbr,
       willingToRelocate,
       eduCeiling,
       aiToleranceScale,
       jobMarketWeight,
+      hasTransferabilityTable: Boolean(careerData.transferability?.bySourceSoc),
+      hasSkillNeighborhoods: Boolean(
+        careerData.skillNeighborhoods?.socVectors &&
+          Object.keys(careerData.skillNeighborhoods.socVectors).length > 0
+      ),
     },
   };
 
@@ -745,25 +875,48 @@ export function scoreAndRankCareersWithDebug(
   careers = applyHardFilters(careers, answers, careerData);
   debug.counts.afterHardFilters = careers.length;
 
+  careers = applySkillAffinityGate(
+    careers,
+    careerData,
+    normalizeJobSocList(answers),
+    personaId,
+    getPersonaScoringConfig(personaId).gateTauScale
+  );
+  debug.counts.afterSkillAffinityGate = careers.length;
+
   careers = applyAiExclusions(careers, answers);
   debug.counts.afterAiExclusions = careers.length;
 
   const withSoft = applySoftPenalties(careers, answers);
-  const withWeights = applyWeights(withSoft, answers, careerData);
+  const withWeights = applyWeights(withSoft, answers, careerData, quizData);
   const afterPenaltyCut = withWeights.filter((c) => (c._penalty || 0) < 100);
   debug.counts.afterPenaltyCut = afterPenaltyCut.length;
+
+  const userEduKeyDbg = readEducationLevel(answers, personaId);
+  const userExpLevelDbg =
+    personaId === "P3" ? ((answers.P3_EXPERIENCE as any)?.mapping?.p3ExperienceLevel as string | undefined) : undefined;
 
   const results = afterPenaltyCut
     .map((c) => ({
       ...c,
       hollandScore: scoreHolland(c, top3),
+      _eduAlign: educationAlignmentScore(userEduKeyDbg, c.educationRequirements),
+      _expAlign: experienceAlignmentScore(userExpLevelDbg, (c as any).experienceRequirements),
     }))
     .sort((a, b) => {
       const penaltyDiff = (a._penalty || 0) - (b._penalty || 0);
       if (penaltyDiff !== 0) return penaltyDiff;
+      const blDiff = (b as any)._blendedTransfer - (a as any)._blendedTransfer;
+      if (blDiff !== 0) return blDiff > 0 ? 1 : blDiff < 0 ? -1 : 0;
+      const expDiff = (b as any)._expAlign - (a as any)._expAlign;
+      if (expDiff !== 0) return expDiff;
+      const eduDiff = (b as any)._eduAlign - (a as any)._eduAlign;
+      if (eduDiff !== 0) return eduDiff;
       return (b.hollandScore || 0) - (a.hollandScore || 0);
     })
-    .map(({ _penalty, ...c }) => c);
+    .map(
+      ({ _penalty, _transferability, _skillAffinityCombined, _blendedTransfer, _eduAlign, _expAlign, ...c }) => c
+    );
 
   debug.counts.final = results.length;
   return { results, debug };

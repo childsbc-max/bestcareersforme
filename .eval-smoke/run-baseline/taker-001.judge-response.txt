@@ -1,0 +1,11 @@
+{
+  "overall_quality_1_to_5": 3,
+  "constraint_compliance_1_to_5": 3,
+  "coherence_1_to_5": 3,
+  "diversity_1_to_5": 3,
+  "constraint_violations": [],
+  "unexpected_inclusions": [],
+  "missed_expectations": [],
+  "suggested_scoring_changes": [],
+  "notes": "mock-judge stub (no API call)"
+}

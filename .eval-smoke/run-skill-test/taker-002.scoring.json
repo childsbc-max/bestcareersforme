@@ -1,0 +1,103 @@
+{
+  "takerId": "taker-002",
+  "personaId": "P1",
+  "scenarioTitle": "P1 · High salary floor ($120k+).",
+  "scenarioRationale": "High salary floor ($120k+).",
+  "answersSummary": {
+    "personaId": "P1",
+    "hollandCode": "SIE",
+    "interestMode": "hollandCode only",
+    "educationCompleted": "bachelor",
+    "effectiveMajors": [],
+    "salaryMin": 120000,
+    "salaryMax": null,
+    "state": "OH",
+    "willingToRelocate": true,
+    "jobMarketWeight": "low",
+    "aiToleranceScale": 3,
+    "workSettings": [],
+    "peopleContactRanges": [
+      {
+        "min": 3,
+        "max": 4.5
+      }
+    ],
+    "physicalDemandLevels": [
+      "Primarily Sedentary"
+    ],
+    "p4Jobs": null
+  },
+  "debug": {
+    "counts": {
+      "start": 928,
+      "afterHardFilters": 50,
+      "afterSkillAffinityGate": 50,
+      "afterAiExclusions": 50,
+      "afterPenaltyCut": 50,
+      "final": 50
+    },
+    "applied": {
+      "personaId": "P1",
+      "effectiveMajorsCount": 0,
+      "salaryMin": 120000,
+      "stateAbbr": "OH",
+      "willingToRelocate": true,
+      "aiToleranceScale": 3,
+      "jobMarketWeight": "low",
+      "hasTransferabilityTable": true,
+      "hasSkillNeighborhoods": true
+    }
+  },
+  "topCareers": [
+    {
+      "socRaw": "11-3111.00",
+      "socNormalized": "11-3111",
+      "name": "Compensation and Benefits Managers",
+      "medianSalary": 140360,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0,
+      "jobDescription": "Plan, direct, or coordinate compensation and benefits activities of an organization."
+    },
+    {
+      "socRaw": "11-3131.00",
+      "socNormalized": "11-3131",
+      "name": "Training and Development Managers",
+      "medianSalary": 127090,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2.6666666666666665,
+      "transferabilityScore": 0,
+      "jobDescription": "Plan, direct, or coordinate the training and development activities and staff of an organization."
+    },
+    {
+      "socRaw": "11-1011.03",
+      "socNormalized": "11-1011",
+      "name": "Chief Sustainability Officers",
+      "medianSalary": 206420,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2,
+      "transferabilityScore": 0,
+      "jobDescription": "Communicate and coordinate with management, shareholders, customers, and employees to address sustainability issues. Enact or oversee a corporate sustainability strategy."
+    },
+    {
+      "socRaw": "11-9121.00",
+      "socNormalized": "11-9121",
+      "name": "Natural Sciences Managers",
+      "medianSalary": 161180,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2,
+      "transferabilityScore": 0,
+      "jobDescription": "Plan, direct, or coordinate activities in such fields as life sciences, physical sciences, mathematics, statistics, and research and development in these fields."
+    },
+    {
+      "socRaw": "11-9121.02",
+      "socNormalized": "11-9121",
+      "name": "Water Resource Specialists",
+      "medianSalary": 161180,
+      "educationRequirements": "Bachelor's Degree",
+      "hollandScore": 2,
+      "transferabilityScore": 0,
+      "jobDescription": "Design or implement programs and strategies related to water resource issues such as supply, quality, and regulatory compliance issues."
+    }
+  ]
+}
